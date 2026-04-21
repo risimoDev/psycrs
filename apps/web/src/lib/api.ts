@@ -443,9 +443,10 @@ export const adminApi = {
     title: string;
     slug: string;
     description?: string;
-    videoId: string;
+    videoId?: string;
+    pdfUrl?: string;
+    contentType: ContentType;
     order?: number;
-    module?: number;
     duration?: number;
     isPublished?: boolean;
   }) =>
@@ -455,8 +456,9 @@ export const adminApi = {
     slug?: string;
     description?: string;
     videoId?: string;
+    pdfUrl?: string;
+    contentType?: ContentType;
     order?: number;
-    module?: number;
     duration?: number;
     isPublished?: boolean;
   }) =>

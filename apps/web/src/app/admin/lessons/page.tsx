@@ -2,8 +2,43 @@
 
 import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { adminApi, type AdminLesson, type AdminVideo } from '../../../lib/api';
+import { adminApi, type AdminLesson, type AdminVideo, type ContentType } from '../../../lib/api';
 import { Button } from '../../../components/button';
+
+const CONTENT_TYPES: { value: ContentType; label: string }[] = [
+  { value: 'lecture', label: 'Видео лекция' },
+  { value: 'affirmation', label: 'Аффирмация' },
+  { value: 'article_pdf', label: 'Статья (PDF)' },
+];
+
+function contentTypeLabel(ct: ContentType): string {
+  return CONTENT_TYPES.find((t) => t.value === ct)?.label ?? ct;
+}
+
+function contentTypeBadge(ct: ContentType) {
+  const colors: Record<ContentType, string> = {
+    lecture: 'bg-blue-500/10 text-blue-400',
+    affirmation: 'bg-purple-500/10 text-purple-400',
+    article_pdf: 'bg-amber-500/10 text-amber-400',
+  };
+  return (
+    <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${colors[ct] ?? ''}`}>
+      {contentTypeLabel(ct)}
+    </span>
+  );
+}
+
+interface LessonFormData {
+  title: string;
+  slug: string;
+  description: string;
+  contentType: ContentType;
+  videoId: string;
+  pdfUrl: string;
+  order: number;
+  duration: number | '';
+  isPublished: boolean;
+}
 
 function LessonForm({
   initial,
@@ -13,16 +48,7 @@ function LessonForm({
   error,
 }: {
   initial?: AdminLesson;
-  onSubmit: (data: {
-    title: string;
-    slug: string;
-    description?: string;
-    videoId: string;
-    order: number;
-    module: number;
-    duration?: number;
-    isPublished: boolean;
-  }) => void;
+  onSubmit: (data: LessonFormData) => void;
   onCancel: () => void;
   loading: boolean;
   error?: string;
@@ -30,9 +56,10 @@ function LessonForm({
   const [title, setTitle] = useState(initial?.title ?? '');
   const [slug, setSlug] = useState(initial?.slug ?? '');
   const [description, setDescription] = useState(initial?.description ?? '');
+  const [contentType, setContentType] = useState<ContentType>(initial?.contentType ?? 'lecture');
   const [videoId, setVideoId] = useState(initial?.videoId ?? '');
+  const [pdfUrl, setPdfUrl] = useState(initial?.pdfUrl ?? '');
   const [order, setOrder] = useState(initial?.order ?? 0);
-  const [module, setModule] = useState(initial?.module ?? 1);
   const [duration, setDuration] = useState<number | ''>(initial?.duration ?? '');
   const [isPublished, setIsPublished] = useState(initial?.isPublished ?? false);
 
@@ -57,20 +84,14 @@ function LessonForm({
       .replace(/^-|-$/g, '');
   }
 
+  const needsVideo = contentType === 'lecture' || contentType === 'affirmation';
+  const needsPdf = contentType === 'article_pdf';
+
   return (
     <form
       onSubmit={(e) => {
         e.preventDefault();
-        onSubmit({
-          title,
-          slug,
-          description: description || undefined,
-          videoId,
-          order,
-          module,
-          duration: duration !== '' ? Number(duration) : undefined,
-          isPublished,
-        });
+        onSubmit({ title, slug, description, contentType, videoId, pdfUrl, order, duration, isPublished });
       }}
       className="space-y-4 bg-surface border border-foreground/10 rounded-lg p-5"
     >
@@ -80,9 +101,30 @@ function LessonForm({
         </div>
       )}
 
+      {/* Тип контента */}
+      <div>
+        <label className="block text-xs font-body text-muted mb-2">Тип контента *</label>
+        <div className="flex gap-2 flex-wrap">
+          {CONTENT_TYPES.map((t) => (
+            <button
+              key={t.value}
+              type="button"
+              onClick={() => setContentType(t.value)}
+              className={`px-4 py-2 rounded-lg text-sm font-body transition-colors border ${
+                contentType === t.value
+                  ? 'border-accent bg-accent/10 text-accent'
+                  : 'border-foreground/10 text-foreground/60 hover:border-foreground/20'
+              }`}
+            >
+              {t.label}
+            </button>
+          ))}
+        </div>
+      </div>
+
       <div className="grid grid-cols-2 gap-4">
         <div className="col-span-2">
-          <label className="block text-xs font-body text-muted mb-1">Название урока *</label>
+          <label className="block text-xs font-body text-muted mb-1">Название *</label>
           <input
             required
             value={title}
@@ -90,7 +132,11 @@ function LessonForm({
               setTitle(e.target.value);
               if (!initial) setSlug(autoSlug(e.target.value));
             }}
-            placeholder="Например: Введение в когнитивную психологию"
+            placeholder={
+              contentType === 'lecture' ? 'Введение в когнитивную психологию' :
+              contentType === 'affirmation' ? 'Утренняя аффирмация уверенности' :
+              'Схема когнитивных искажений'
+            }
             className="w-full bg-background border border-foreground/10 rounded px-3 py-2 text-sm text-foreground font-body focus:outline-none focus:border-accent/50"
           />
         </div>
@@ -102,60 +148,14 @@ function LessonForm({
             pattern="[a-z0-9-]+"
             value={slug}
             onChange={(e) => setSlug(e.target.value)}
-            placeholder="vvedenie-v-kognitivnuyu-psihologiyu"
+            placeholder="vvedenie-v-psihologiyu"
             className="w-full bg-background border border-foreground/10 rounded px-3 py-2 text-foreground focus:outline-none focus:border-accent/50 font-mono text-xs"
           />
-          <p className="text-[10px] text-muted mt-0.5">Только латиница, цифры и дефисы</p>
+          <p className="text-[10px] text-muted mt-0.5">Латиница, цифры, дефисы</p>
         </div>
 
         <div>
-          <label className="block text-xs font-body text-muted mb-1">Видео *</label>
-          <div className="flex gap-2">
-            <select
-              value={videoId}
-              onChange={(e) => setVideoId(e.target.value)}
-              className="flex-1 bg-background border border-foreground/10 rounded px-3 py-2 text-sm text-foreground font-body focus:outline-none focus:border-accent/50"
-            >
-              <option value="">— Выберите видео —</option>
-              {videosData?.items.map((v: AdminVideo) => (
-                <option key={v.id} value={v.id}>
-                  {v.originalName} ({v.id.slice(0, 8)}...)
-                </option>
-              ))}
-            </select>
-            <input
-              value={videoId}
-              onChange={(e) => setVideoId(e.target.value)}
-              placeholder="или ID"
-              className="w-32 bg-background border border-foreground/10 rounded px-3 py-2 text-xs text-foreground font-mono focus:outline-none focus:border-accent/50"
-            />
-          </div>
-        </div>
-
-        <div className="col-span-2">
-          <label className="block text-xs font-body text-muted mb-1">Описание</label>
-          <textarea
-            value={description}
-            onChange={(e) => setDescription(e.target.value)}
-            rows={3}
-            placeholder="Краткое описание урока..."
-            className="w-full bg-background border border-foreground/10 rounded px-3 py-2 text-sm text-foreground font-body focus:outline-none focus:border-accent/50 resize-none"
-          />
-        </div>
-
-        <div>
-          <label className="block text-xs font-body text-muted mb-1">Модуль</label>
-          <input
-            type="number"
-            min={1}
-            value={module}
-            onChange={(e) => setModule(Number(e.target.value))}
-            className="w-full bg-background border border-foreground/10 rounded px-3 py-2 text-sm text-foreground font-body focus:outline-none focus:border-accent/50"
-          />
-        </div>
-
-        <div>
-          <label className="block text-xs font-body text-muted mb-1">Порядок в модуле</label>
+          <label className="block text-xs font-body text-muted mb-1">Порядок</label>
           <input
             type="number"
             min={0}
@@ -165,19 +165,73 @@ function LessonForm({
           />
         </div>
 
-        <div>
-          <label className="block text-xs font-body text-muted mb-1">Длительность (сек)</label>
-          <input
-            type="number"
-            min={0}
-            value={duration}
-            onChange={(e) => setDuration(e.target.value === '' ? '' : Number(e.target.value))}
-            placeholder="1200"
-            className="w-full bg-background border border-foreground/10 rounded px-3 py-2 text-sm text-foreground font-body focus:outline-none focus:border-accent/50"
+        <div className="col-span-2">
+          <label className="block text-xs font-body text-muted mb-1">Описание</label>
+          <textarea
+            value={description}
+            onChange={(e) => setDescription(e.target.value)}
+            rows={2}
+            placeholder="Краткое описание..."
+            className="w-full bg-background border border-foreground/10 rounded px-3 py-2 text-sm text-foreground font-body focus:outline-none focus:border-accent/50 resize-none"
           />
         </div>
 
-        <div className="flex items-end pb-1">
+        {/* Видео — для лекций и аффирмаций */}
+        {needsVideo && (
+          <>
+            <div className="col-span-2">
+              <label className="block text-xs font-body text-muted mb-1">Видео *</label>
+              <div className="flex gap-2">
+                <select
+                  value={videoId}
+                  onChange={(e) => setVideoId(e.target.value)}
+                  className="flex-1 bg-background border border-foreground/10 rounded px-3 py-2 text-sm text-foreground font-body focus:outline-none focus:border-accent/50"
+                >
+                  <option value="">— Выберите из загруженных —</option>
+                  {videosData?.items.map((v: AdminVideo) => (
+                    <option key={v.id} value={v.id}>
+                      {v.originalName} ({v.id.slice(0, 8)}…)
+                    </option>
+                  ))}
+                </select>
+                <input
+                  value={videoId}
+                  onChange={(e) => setVideoId(e.target.value)}
+                  placeholder="или ID вручную"
+                  className="w-36 bg-background border border-foreground/10 rounded px-3 py-2 text-xs text-foreground font-mono focus:outline-none focus:border-accent/50"
+                />
+              </div>
+            </div>
+            <div>
+              <label className="block text-xs font-body text-muted mb-1">Длительность (сек)</label>
+              <input
+                type="number"
+                min={0}
+                value={duration}
+                onChange={(e) => setDuration(e.target.value === '' ? '' : Number(e.target.value))}
+                placeholder="1200"
+                className="w-full bg-background border border-foreground/10 rounded px-3 py-2 text-sm text-foreground font-body focus:outline-none focus:border-accent/50"
+              />
+            </div>
+          </>
+        )}
+
+        {/* PDF URL — для статей */}
+        {needsPdf && (
+          <div className="col-span-2">
+            <label className="block text-xs font-body text-muted mb-1">Ссылка на PDF *</label>
+            <input
+              required={needsPdf}
+              value={pdfUrl}
+              onChange={(e) => setPdfUrl(e.target.value)}
+              placeholder="https://... или /storage/articles/file.pdf"
+              className="w-full bg-background border border-foreground/10 rounded px-3 py-2 text-sm text-foreground font-body focus:outline-none focus:border-accent/50"
+            />
+            <p className="text-[10px] text-muted mt-0.5">Прямая ссылка для скачивания/просмотра PDF</p>
+          </div>
+        )}
+
+        <div className="col-span-2 flex items-center">
           <label className="flex items-center gap-2 cursor-pointer">
             <input
               type="checkbox"
@@ -191,13 +245,16 @@ function LessonForm({
       </div>
 
       <div className="flex gap-3 pt-2">
-        <Button type="submit" size="sm" disabled={loading || !videoId}>
-          {loading ? 'Сохранение...' : initial ? 'Обновить урок' : 'Создать урок'}
+        <Button type="submit" size="sm" disabled={loading || (needsVideo && !videoId) || (needsPdf && !pdfUrl)}>
+          {loading ? 'Сохранение...' : initial ? 'Обновить' : 'Создать'}
         </Button>
         <Button type="button" variant="ghost" size="sm" onClick={onCancel}>
           Отмена
         </Button>
       </div>
+    </form>
+  );
+}
     </form>
   );
 }
@@ -222,7 +279,18 @@ export default function LessonsPage() {
   });
 
   const createMut = useMutation({
-    mutationFn: adminApi.createLesson,
+    mutationFn: (d: LessonFormData) =>
+      adminApi.createLesson({
+        title: d.title,
+        slug: d.slug,
+        description: d.description || undefined,
+        contentType: d.contentType,
+        videoId: d.videoId || undefined,
+        pdfUrl: d.pdfUrl || undefined,
+        order: d.order,
+        duration: d.duration !== '' ? Number(d.duration) : undefined,
+        isPublished: d.isPublished,
+      }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['admin', 'lessons'] });
       setShowCreate(false);
@@ -232,8 +300,18 @@ export default function LessonsPage() {
   });
 
   const updateMut = useMutation({
-    mutationFn: ({ id, ...rest }: { id: string } & Parameters<typeof adminApi.updateLesson>[1]) =>
-      adminApi.updateLesson(id, rest),
+    mutationFn: ({ id, ...d }: { id: string } & LessonFormData) =>
+      adminApi.updateLesson(id, {
+        title: d.title,
+        slug: d.slug,
+        description: d.description || undefined,
+        contentType: d.contentType,
+        videoId: d.videoId || undefined,
+        pdfUrl: d.pdfUrl || undefined,
+        order: d.order,
+        duration: d.duration !== '' ? Number(d.duration) : undefined,
+        isPublished: d.isPublished,
+      }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['admin', 'lessons'] });
       setEditingId(null);
@@ -256,15 +334,16 @@ export default function LessonsPage() {
 
   const groupedLessons = data?.items.reduce(
     (acc, lesson) => {
-      const mod = lesson.module ?? 1;
-      if (!acc[mod]) acc[mod] = [];
-      acc[mod].push(lesson);
+      const ct = lesson.contentType ?? 'lecture';
+      if (!acc[ct]) acc[ct] = [];
+      acc[ct].push(lesson);
       return acc;
     },
-    {} as Record<number, AdminLesson[]>,
+    {} as Record<string, AdminLesson[]>,
   ) ?? {};
 
-  const sortedModules = Object.keys(groupedLessons).map(Number).sort((a, b) => a - b);
+  const typeOrder: string[] = ['lecture', 'affirmation', 'article_pdf'];
+  const presentTypes = typeOrder.filter((t) => groupedLessons[t]?.length);
   const totalPages = data ? Math.ceil(data.total / data.limit) : 1;
 
   return (
@@ -274,7 +353,7 @@ export default function LessonsPage() {
           <h1 className="font-heading text-2xl font-semibold text-foreground">Уроки</h1>
           {data && (
             <p className="text-sm text-muted font-body mt-1">
-              Всего: {data.total} уроков в {sortedModules.length} модулях
+              Всего: {data.total} — лекций: {groupedLessons['lecture']?.length ?? 0}, аффирмаций: {groupedLessons['affirmation']?.length ?? 0}, статей: {groupedLessons['article_pdf']?.length ?? 0}
             </p>
           )}
         </div>
@@ -298,15 +377,12 @@ export default function LessonsPage() {
         <p className="text-muted font-body text-sm">Загрузка...</p>
       ) : (
         <>
-          {sortedModules.map((mod) => (
-            <div key={mod} className="mb-6">
-              <h2 className="font-heading text-lg font-semibold text-foreground mb-3 flex items-center gap-2">
-                <span className="w-7 h-7 rounded bg-accent/15 text-accent text-xs font-bold flex items-center justify-center">
-                  {mod}
-                </span>
-                Модуль {mod}
-                <span className="text-xs text-muted font-normal font-body ml-1">
-                  ({groupedLessons[mod]?.length ?? 0} уроков)
+          {presentTypes.map((ct) => (
+            <div key={ct} className="mb-8">
+              <h2 className="font-heading text-base font-semibold text-foreground mb-3 flex items-center gap-2">
+                {contentTypeBadge(ct as ContentType)}
+                <span className="text-xs text-muted font-normal font-body">
+                  ({groupedLessons[ct]?.length ?? 0} шт.)
                 </span>
               </h2>
 
@@ -322,7 +398,7 @@ export default function LessonsPage() {
                     </tr>
                   </thead>
                   <tbody>
-                    {(groupedLessons[mod] ?? [])
+                    {(groupedLessons[ct] ?? [])
                       .sort((a, b) => a.order - b.order)
                       .map((lesson) => (
                         <tr key={lesson.id} className="border-b border-foreground/5 last:border-0">
@@ -347,7 +423,9 @@ export default function LessonsPage() {
                                   </div>
                                 )}
                                 <div className="text-[10px] text-foreground/30 font-mono mt-0.5">
-                                  /{lesson.slug}{lesson.videoId ? ` · video:${lesson.videoId.slice(0, 8)}` : ''}
+                                  /{lesson.slug}
+                                  {lesson.videoId ? ` · video:${lesson.videoId.slice(0, 8)}` : ''}
+                                  {lesson.pdfUrl ? ` · pdf` : ''}
                                 </div>
                               </td>
                               <td className="px-4 py-3 text-muted">{formatDuration(lesson.duration)}</td>
@@ -381,7 +459,7 @@ export default function LessonsPage() {
                                 </button>
                                 <button
                                   onClick={() => {
-                                    if (confirm(`Удалить урок "${lesson.title}"?`)) {
+                                    if (confirm(`Удалить "${lesson.title}"?`)) {
                                       deleteMut.mutate(lesson.id);
                                     }
                                   }}

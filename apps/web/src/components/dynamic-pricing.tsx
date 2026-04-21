@@ -17,6 +17,8 @@ function formatPrice(kopecks: number): string {
 function periodLabel(period: string): string {
   switch (period) {
     case 'month': return '/ месяц';
+    case '2month': return '/ 2 месяца';
+    case '3month': return '/ 3 месяца';
     case 'year': return '/ год';
     case 'lifetime': return 'навсегда';
     default: return `/ ${period}`;

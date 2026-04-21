@@ -72,6 +72,8 @@ function TariffForm({
             className="w-full bg-background border border-foreground/10 rounded px-3 py-2 text-sm text-foreground font-body focus:outline-none focus:border-accent/40"
           >
             <option value="month">Месяц</option>
+            <option value="2month">2 месяца</option>
+            <option value="3month">3 месяца</option>
             <option value="year">Год</option>
             <option value="lifetime">Навсегда</option>
           </select>
