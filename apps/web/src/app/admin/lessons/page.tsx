@@ -255,9 +255,6 @@ function LessonForm({
     </form>
   );
 }
-    </form>
-  );
-}
 
 function formatDuration(seconds: number | null): string {
   if (!seconds) return '—';
