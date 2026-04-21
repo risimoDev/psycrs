@@ -338,40 +338,26 @@ SQL
 # ─── Nginx Config ─────────────────────────────────────────
 
 configure_nginx() {
-  log "Configuring Nginx for ${DOMAIN}..."
+  log "Configuring Nginx for ${DOMAIN} (HTTP-only; certbot will add SSL)..."
 
+  # Write HTTP-only config. certbot --nginx will detect server_name and inject
+  # the ssl_certificate / options-ssl-nginx.conf directives automatically.
   cat > "$NGINX_CONF" <<NGINX
 # ──────────────────────────────────────────────────────────
 # PsyCRS — Nginx Configuration
 # Domain: ${DOMAIN}
+# NOTE: SSL block injected by certbot — do not edit SSL lines manually.
 # ──────────────────────────────────────────────────────────
 
-# HTTP → HTTPS redirect + ACME challenge
 server {
     listen 80;
     listen [::]:80;
     server_name ${DOMAIN} www.${DOMAIN};
 
+    # ACME challenge for Let's Encrypt
     location /.well-known/acme-challenge/ {
         root /var/www/html;
     }
-
-    location / {
-        return 301 https://\$host\$request_uri;
-    }
-}
-
-# Main HTTPS server
-server {
-    listen 443 ssl http2;
-    listen [::]:443 ssl http2;
-    server_name ${DOMAIN} www.${DOMAIN};
-
-    # SSL — populated by certbot
-    ssl_certificate     /etc/letsencrypt/live/${DOMAIN}/fullchain.pem;
-    ssl_certificate_key /etc/letsencrypt/live/${DOMAIN}/privkey.pem;
-    include             /etc/letsencrypt/options-ssl-nginx.conf;
-    ssl_dhparam         /etc/letsencrypt/ssl-dhparams.pem;
 
     # ─── Security Headers ─────────────────────────────────
     add_header X-Frame-Options "DENY" always;
@@ -379,7 +365,6 @@ server {
     add_header X-XSS-Protection "1; mode=block" always;
     add_header Referrer-Policy "strict-origin-when-cross-origin" always;
     add_header Permissions-Policy "camera=(), microphone=(), geolocation=()" always;
-    add_header Strict-Transport-Security "max-age=63072000; includeSubDomains; preload" always;
 
     client_max_body_size 500m;
 
@@ -446,21 +431,13 @@ NGINX
   ln -sf "$NGINX_CONF" /etc/nginx/sites-enabled/psycrs.conf
   rm -f /etc/nginx/sites-enabled/default
 
-  # Test with HTTP-only config first (SSL certs don't exist yet)
-  # Temporarily comment out SSL lines for initial test
-  local tmp_conf
-  tmp_conf=$(mktemp)
-  sed '/ssl_certificate\|ssl_dhparam\|options-ssl/s/^/# /' "$NGINX_CONF" > "$tmp_conf"
-  if nginx -t -c "$tmp_conf" 2>/dev/null; then
-    rm "$tmp_conf"
+  if nginx -t; then
+    systemctl reload nginx
+    log "Nginx configured for ${DOMAIN}"
   else
-    rm "$tmp_conf"
-    log "WARNING: Nginx config will be valid after certbot runs — skipping reload for now"
-    return
+    err "Nginx config test failed — check ${NGINX_CONF}"
+    exit 1
   fi
-
-  systemctl reload nginx 2>/dev/null || true
-  log "Nginx configured for ${DOMAIN}"
 }
 
 # ─── PM2 Startup ──────────────────────────────────────────
