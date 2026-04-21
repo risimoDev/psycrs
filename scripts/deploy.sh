@@ -8,8 +8,9 @@ IFS=$'\n\t'
 
 # ─── Constants ────────────────────────────────────────────
 
-APP_DIR="/var/www/app"
-LOG_FILE="/var/log/app-deploy.log"
+APP_DIR="/var/www/psycrs"
+ENV_FILE="${APP_DIR}/.env"
+LOG_FILE="/var/log/psycrs-deploy.log"
 SKIP_MIGRATIONS=false
 
 # ─── Helpers ──────────────────────────────────────────────
@@ -54,7 +55,7 @@ pull_changes() {
 
   if [[ "$lock_hash_before" != "$lock_hash_after" ]]; then
     log "package-lock.json changed — installing dependencies..."
-    npm ci --omit=dev 2>&1 | tail -5
+    npm ci 2>&1 | tail -5
     log "Dependencies updated"
   else
     log "Dependencies unchanged — skipping npm install"
@@ -80,6 +81,10 @@ run_migrations() {
 build_app() {
   log "Building applications..."
   cd "$APP_DIR"
+
+  # NEXT_PUBLIC_* vars are baked into the JS bundle at build time
+  # shellcheck source=/dev/null
+  set -a; source "$ENV_FILE"; set +a
 
   npx turbo build || die "Build failed — aborting deploy. PM2 still running old version."
 

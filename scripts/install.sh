@@ -7,9 +7,9 @@ IFS=$'\n\t'
 
 # ─── Constants ────────────────────────────────────────────
 
-APP_DIR="/var/www/app"
+APP_DIR="/var/www/psycrs"
 ENV_FILE="${APP_DIR}/.env"
-LOG_FILE="/var/log/app-install.log"
+LOG_FILE="/var/log/psycrs-install.log"
 
 # ─── Helpers ──────────────────────────────────────────────
 
@@ -64,7 +64,7 @@ check_commands() {
 install_deps() {
   log "Installing npm dependencies..."
   cd "$APP_DIR"
-  npm ci --omit=dev 2>&1 | tail -5
+  npm ci 2>&1 | tail -5
   log "Dependencies installed"
 }
 
@@ -74,10 +74,13 @@ run_migrations() {
   log "Running database migrations..."
   cd "${APP_DIR}/apps/api"
 
-  # Copy .env for Prisma
+  # Ensure Prisma can find DATABASE_URL
   if [[ ! -f .env ]]; then
     ln -sf "$ENV_FILE" .env
   fi
+
+  # Generate Prisma client (needed after fresh clone)
+  npx prisma generate
 
   npx prisma migrate deploy
   log "Migrations completed"
@@ -89,14 +92,47 @@ build_app() {
   log "Building applications..."
   cd "$APP_DIR"
 
+  # NEXT_PUBLIC_* vars must be present at build time (baked into JS bundle)
+  # shellcheck source=/dev/null
+  set -a; source "$ENV_FILE"; set +a
+
   npx turbo build || die "Build failed — aborting"
 
   log "Build completed successfully"
 }
 
+# ─── Deploy Nginx Config from Repo ───────────────────────
+
+deploy_nginx_config() {
+  local repo_nginx="${APP_DIR}/nginx/psyhocourse.conf"
+  local nginx_dest="/etc/nginx/sites-available/psycrs.conf"
+
+  if [[ ! -f "$repo_nginx" ]]; then
+    log "No nginx config found in repo — using existing server config"
+    return
+  fi
+
+  log "Deploying nginx config from repo..."
+  cp "$repo_nginx" "$nginx_dest"
+  ln -sf "$nginx_dest" /etc/nginx/sites-enabled/psycrs.conf
+
+  if nginx -t 2>/dev/null; then
+    systemctl reload nginx
+    log "Nginx config updated and reloaded"
+  else
+    err "Nginx config test failed — check ${nginx_dest}"
+    nginx -t
+  fi
+}
+
 # ─── PM2 Ecosystem Config ────────────────────────────────
 
 create_ecosystem() {
+  if [[ -f "${APP_DIR}/ecosystem.config.js" ]]; then
+    log "ecosystem.config.js already exists in repo — skipping generation"
+    return
+  fi
+
   log "Creating PM2 ecosystem config..."
 
   cat > "${APP_DIR}/ecosystem.config.js" << 'ECOSYSTEM'
@@ -108,7 +144,7 @@ module.exports = {
       script: 'dist/server.js',
       instances: 1,
       exec_mode: 'fork',
-      env_file: '/var/www/app/.env',
+      env_file: '/var/www/psycrs/.env',
       env: {
         NODE_ENV: 'production',
       },
@@ -194,6 +230,7 @@ main() {
   install_deps
   run_migrations
   build_app
+  deploy_nginx_config
   create_ecosystem
   start_pm2
   health_check

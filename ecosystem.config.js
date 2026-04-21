@@ -6,7 +6,7 @@ module.exports = {
       script: 'dist/server.js',
       instances: 1,
       exec_mode: 'fork',
-      env_file: '/var/www/app/.env',
+      env_file: '/var/www/psycrs/.env',
       env: {
         NODE_ENV: 'production',
       },
