@@ -205,7 +205,11 @@ export function VideoPlayer({ src, initialPosition, onProgress, drm }: VideoPlay
     const video = videoRef.current;
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const shaka = video && (video as any).__shakaPlayer;
-    if (shaka) { shaka.destroy(); /* eslint-disable-next-line @typescript-eslint/no-explicit-any */ (video as any).__shakaPlayer = null; }
+    if (shaka) {
+      shaka.destroy();
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      (video as any).__shakaPlayer = null;
+    }
   }, []);
 
   // Загрузка видео
