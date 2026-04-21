@@ -61,20 +61,20 @@ function refreshOnce(): Promise<boolean> {
 
 async function request<T>(path: string, options: FetchOptions = {}): Promise<T> {
   const { body, headers: customHeaders, ...rest } = options;
-
+  
+  // Не устанавливаем Content-Type для FormData — браузер добавит его с boundary
+  const isFormData = body instanceof FormData;
+  
   const headers: Record<string, string> = {
-    'Content-Type': 'application/json',
+    ...(!isFormData && { 'Content-Type': 'application/json' }),
     ...(customHeaders as Record<string, string>),
   };
-
-  if (accessToken) {
-    headers['Authorization'] = `Bearer ${accessToken}`;
-  }
-
+  
   const res = await fetch(`${API_BASE}${path}`, {
     ...rest,
     headers,
-    body: body ? JSON.stringify(body) : undefined,
+    // Не сериализуем FormData в JSON
+    body: isFormData ? body : (body ? JSON.stringify(body) : undefined),
   });
 
   if (res.status === 204) {
