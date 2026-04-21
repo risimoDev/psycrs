@@ -392,7 +392,6 @@ server {
         send_timeout 60s;
         sendfile on;
         tcp_nopush on;
-        aio on;
         types {
             application/vnd.apple.mpegurl m3u8;
             video/mp2t ts;

@@ -95,7 +95,9 @@ ensure_swap() {
 install_deps() {
   log "Installing npm dependencies..."
   cd "$APP_DIR"
-  npm ci 2>&1 | tail -5
+  # Use npm install (not npm ci) to handle lockfile drift and workspace edge-cases.
+  # Full output is shown so errors are visible in logs.
+  npm install 2>&1
   log "Dependencies installed"
 }
 
@@ -137,22 +139,30 @@ build_app() {
 deploy_nginx_config() {
   local repo_nginx="${APP_DIR}/nginx/psyhocourse.conf"
   local nginx_dest="/etc/nginx/sites-available/psycrs.conf"
+  local ssl_cert="/etc/letsencrypt/live/risimobzkdev.ru/fullchain.pem"
 
   if [[ ! -f "$repo_nginx" ]]; then
-    log "No nginx config found in repo — using existing server config"
+    log "No nginx config found in repo — skipping"
     return
   fi
 
-  log "Deploying nginx config from repo..."
+  if [[ ! -f "$ssl_cert" ]]; then
+    log "SSL certificate not yet present — skipping nginx config deploy"
+    log "(setup-server.sh handles nginx; re-run deploy.sh after certbot obtains SSL)"
+    return
+  fi
+
+  log "Deploying nginx HTTPS config from repo..."
   cp "$repo_nginx" "$nginx_dest"
   ln -sf "$nginx_dest" /etc/nginx/sites-enabled/psycrs.conf
 
-  if nginx -t 2>/dev/null; then
+  if nginx -t; then
     systemctl reload nginx
-    log "Nginx config updated and reloaded"
+    log "Nginx config deployed and reloaded"
   else
-    err "Nginx config test failed — check ${nginx_dest}"
-    nginx -t
+    err "Nginx config test failed — reverting to keep nginx running"
+    nginx -t >&2 || true
+    err "Fix ${nginx_dest} manually and run: nginx -t && systemctl reload nginx"
   fi
 }
 
