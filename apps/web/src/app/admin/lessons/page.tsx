@@ -60,7 +60,7 @@ function LessonForm({
   const [contentType, setContentType] = useState<ContentType>(initial?.contentType ?? 'lecture');
   const [videoId, setVideoId] = useState(initial?.videoId ?? '');
   const [articleId, setArticleId] = useState(initial?.articleId ?? '');
-  const [pdfUrl, setPdfUrl] = useState(initial?.pdfUrl ?? '');
+  const [pdfUrl, _setPdfUrl] = useState(initial?.pdfUrl ?? '');
   const [order, setOrder] = useState(initial?.order ?? 0);
   const [duration, setDuration] = useState<number | ''>(initial?.duration ?? '');
   const [isPublished, setIsPublished] = useState(initial?.isPublished ?? false);
