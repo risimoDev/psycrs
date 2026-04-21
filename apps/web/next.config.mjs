@@ -3,6 +3,10 @@ const nextConfig = {
   transpilePackages: ['@psyhocourse/shared'],
   poweredByHeader: false,
   reactStrictMode: true,
+  // ESLint runs in CI — do not block production builds
+  eslint: {
+    ignoreDuringBuilds: true,
+  },
   headers: async () => [
     {
       source: '/(.*)',

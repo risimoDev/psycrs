@@ -97,7 +97,7 @@ export default function PaymentResultPage() {
                 <Button onClick={() => router.push('/subscribe')}>
                   Попробовать снова
                 </Button>
-                <Button variant="secondary" onClick={() => router.push('/')}>
+                <Button variant="outline" onClick={() => router.push('/')}>
                   На главную
                 </Button>
               </div>
