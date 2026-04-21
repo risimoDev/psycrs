@@ -5,6 +5,7 @@ import { adminUserService } from '../services/admin-user.service.js';
 import { adminSubscriptionService } from '../services/admin-subscription.service.js';
 import { adminAnalyticsService } from '../services/admin-analytics.service.js';
 import { adminVideoService } from '../services/admin-video.service.js';
+import { adminArticleService } from '../services/admin-article.service.js';
 import { adminReviewService } from '../services/admin-review.service.js';
 import { adminTariffService } from '../services/admin-tariff.service.js';
 import { settingsService } from '../services/settings.service.js';
@@ -22,6 +23,7 @@ const createLessonSchema = z.object({
   slug: z.string().min(1).max(100).regex(/^[a-z0-9-]+$/, 'Slug must be lowercase alphanumeric with hyphens'),
   description: z.string().max(2000).optional(),
   videoId: z.string().min(1).optional(),
+  articleId: z.string().uuid().optional(),
   order: z.number().int().min(0).optional(),
   module: z.number().int().min(1).optional(),
   duration: z.number().int().min(0).optional(),
@@ -35,6 +37,7 @@ const updateLessonSchema = z.object({
   slug: z.string().min(1).max(100).regex(/^[a-z0-9-]+$/).optional(),
   description: z.string().max(2000).optional(),
   videoId: z.string().min(1).optional(),
+  articleId: z.string().uuid().nullable().optional(),
   order: z.number().int().min(0).optional(),
   module: z.number().int().min(1).optional(),
   duration: z.number().int().min(0).optional(),
@@ -351,6 +354,35 @@ export class AdminController {
   async deleteTariff(request: FastifyRequest, reply: FastifyReply) {
     const { id } = idParamSchema.parse(request.params);
     await adminTariffService.delete(id, request.userId);
+    return reply.status(204).send();
+  }
+
+  // ── Articles ─────────────────────────────────────────
+
+  async listArticles(request: FastifyRequest, reply: FastifyReply) {
+    const query = paginationSchema.parse(request.query);
+    const result = await adminArticleService.list(query.page, query.limit);
+    return reply.send(result);
+  }
+
+  async uploadArticle(request: FastifyRequest, reply: FastifyReply) {
+    const data = await request.file();
+    if (!data) throw new ValidationError('No file provided');
+    if (!data.filename.toLowerCase().endsWith('.pdf') && data.mimetype !== 'application/pdf') {
+      throw new ValidationError('Only PDF files are allowed');
+    }
+    const result = await adminArticleService.upload(
+      data.file,
+      data.filename,
+      data.file.readableLength ?? undefined,
+      request.userId,
+    );
+    return reply.status(201).send(result);
+  }
+
+  async deleteArticle(request: FastifyRequest, reply: FastifyReply) {
+    const { id } = idParamSchema.parse(request.params);
+    await adminArticleService.delete(id, request.userId);
     return reply.status(204).send();
   }
 }

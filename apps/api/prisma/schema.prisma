@@ -56,6 +56,7 @@ model User {
     subscription    Subscription?
     payments        Payment[]
     videoTokens     VideoToken[]
+    articleTokens   ArticleToken[]
     refreshTokens   RefreshToken[]
     auditLogs       AuditLog[]
     progress        Progress[]
@@ -111,6 +112,7 @@ model Lesson {
     order       Int         @default(0)
     module      Int         @default(1)
     videoId     String?     @map("video_id") @db.Uuid
+    articleId   String?     @map("article_id") @db.Uuid
     duration    Int?
     contentType ContentType @default(lecture) @map("content_type")
     pdfUrl      String?     @map("pdf_url")
@@ -118,7 +120,8 @@ model Lesson {
     createdAt   DateTime    @default(now()) @map("created_at")
     updatedAt   DateTime    @default(now()) @updatedAt @map("updated_at")
 
-    video    Video?     @relation(fields: [videoId], references: [id], onDelete: SetNull)
+    video    Video?   @relation(fields: [videoId], references: [id], onDelete: SetNull)
+    article  Article? @relation(fields: [articleId], references: [id], onDelete: SetNull)
     progress Progress[]
 
     @@index([order])
@@ -141,6 +144,38 @@ model Video {
 
     @@index([status])
     @@map("videos")
+}
+
+model Article {
+    id           String   @id @default(uuid()) @db.Uuid
+    filename     String
+    originalName String   @map("original_name")
+    size         BigInt?
+    createdAt    DateTime @default(now()) @map("created_at")
+    updatedAt    DateTime @default(now()) @updatedAt @map("updated_at")
+
+    tokens  ArticleToken[]
+    lessons Lesson[]
+
+    @@map("articles")
+}
+
+model ArticleToken {
+    id        String    @id @default(uuid()) @db.Uuid
+    userId    String    @map("user_id") @db.Uuid
+    articleId String    @map("article_id") @db.Uuid
+    tokenHash String    @map("token_hash")
+    issuedIp  String?   @map("issued_ip")
+    expiresAt DateTime  @map("expires_at")
+    revokedAt DateTime? @map("revoked_at")
+
+    user    User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+    article Article @relation(fields: [articleId], references: [id], onDelete: Cascade)
+
+    @@index([tokenHash])
+    @@index([expiresAt])
+    @@index([userId])
+    @@map("article_tokens")
 }
 
 model Setting {

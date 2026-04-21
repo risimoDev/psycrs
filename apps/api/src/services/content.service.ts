@@ -10,6 +10,7 @@ export interface ContentItem {
   order: number;
   contentType: ContentType;
   pdfUrl: string | null;
+  articleId: string | null;
   duration: number | null;
   isMarkedViewed: boolean;
   videoId: string | null;
@@ -34,6 +35,7 @@ export class ContentService {
         order: true,
         contentType: true,
         pdfUrl: true,
+        articleId: true,
         duration: true,
         videoId: true,
       },
@@ -75,6 +77,7 @@ export class ContentService {
         order: true,
         contentType: true,
         pdfUrl: true,
+        articleId: true,
         duration: true,
         videoId: true,
       },

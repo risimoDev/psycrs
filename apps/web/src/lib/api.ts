@@ -193,6 +193,7 @@ export interface ContentItem {
   order: number;
   contentType: ContentType;
   pdfUrl: string | null;
+  articleId: string | null;
   duration: number | null;
   videoId: string | null;
   isMarkedViewed: boolean;
@@ -230,6 +231,12 @@ export const contentApi = {
     request<{ isMarkedViewed: boolean }>(`/content/${id}/mark-viewed`, {
       method: 'POST',
       body: { viewed },
+    }),
+
+  requestArticleToken: (lessonId: string) =>
+    request<{ token: string }>('/articles/request-token', {
+      method: 'POST',
+      body: { lessonId },
     }),
 };
 
@@ -337,6 +344,7 @@ export interface AdminLesson {
   order: number;
   module: number;
   videoId: string;
+  articleId: string | null;
   duration: number | null;
   isPublished: boolean;
   contentType: ContentType;
@@ -352,6 +360,16 @@ export interface AdminVideo {
   status: 'uploading' | 'processing' | 'ready' | 'error';
   duration: number | null;
   size: number | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface AdminArticle {
+  id: string;
+  filename: string;
+  originalName: string;
+  size: number | null;
+  lessonCount: number;
   createdAt: string;
   updatedAt: string;
 }
@@ -444,6 +462,7 @@ export const adminApi = {
     slug: string;
     description?: string;
     videoId?: string;
+    articleId?: string;
     pdfUrl?: string;
     contentType: ContentType;
     order?: number;
@@ -456,6 +475,7 @@ export const adminApi = {
     slug?: string;
     description?: string;
     videoId?: string;
+    articleId?: string | null;
     pdfUrl?: string;
     contentType?: ContentType;
     order?: number;
@@ -618,6 +638,50 @@ export const adminApi = {
     request<AdminTariff>(`/admin/tariffs/${id}`, { method: 'PATCH', body: data }),
   deleteTariff: (id: string) =>
     request<void>(`/admin/tariffs/${id}`, { method: 'DELETE' }),
+
+  // Articles
+  articles: (page = 1, limit = 50) =>
+    request<PaginatedResponse<AdminArticle>>(`/admin/articles?page=${page}&limit=${limit}`),
+
+  uploadArticle: async (file: File): Promise<AdminArticle> => {
+    const formData = new FormData();
+    formData.append('file', file);
+
+    const headers: Record<string, string> = {};
+    if (accessToken) {
+      headers['Authorization'] = `Bearer ${accessToken}`;
+    }
+
+    let res = await fetch(`${API_BASE}/admin/articles/upload`, {
+      method: 'POST',
+      headers,
+      body: formData,
+    });
+
+    if (res.status === 401) {
+      const refreshed = await refreshOnce();
+      if (refreshed && accessToken) {
+        headers['Authorization'] = `Bearer ${accessToken}`;
+        const retryForm = new FormData();
+        retryForm.append('file', file);
+        res = await fetch(`${API_BASE}/admin/articles/upload`, {
+          method: 'POST',
+          headers,
+          body: retryForm,
+        });
+      }
+    }
+
+    if (!res.ok) {
+      const data = await res.json();
+      throw new ApiError(res.status, data.message ?? 'Upload failed');
+    }
+
+    return res.json();
+  },
+
+  deleteArticle: (id: string) =>
+    request<void>(`/admin/articles/${id}`, { method: 'DELETE' }),
 };
 
 // ─── Public Settings ───────────────────────────────────

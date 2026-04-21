@@ -16,6 +16,7 @@ import { subscriptionRoutes } from './routes/subscription.routes.js';
 import { tariffRoutes } from './routes/tariff.routes.js';
 import { videoRoutes } from './routes/video.routes.js';
 import { contentRoutes } from './routes/content.routes.js';
+import { articleRoutes } from './routes/article.routes.js';
 
 // Augment FastifyRequest globally with auth context
 declare module 'fastify' {
@@ -89,6 +90,7 @@ export async function buildApp(): Promise<FastifyInstance> {
   await app.register(tariffRoutes, { prefix: '/tariffs' });
   await app.register(settingsRoutes, { prefix: '/settings' });
   await app.register(adminRoutes, { prefix: '/admin' });
+  await app.register(articleRoutes, { prefix: '/articles' });
 
   return app;
 }

@@ -9,6 +9,7 @@ interface CreateLessonInput {
   slug: string;
   description?: string;
   videoId?: string;
+  articleId?: string;
   order?: number;
   module?: number;
   duration?: number;
@@ -22,6 +23,7 @@ interface UpdateLessonInput {
   slug?: string;
   description?: string;
   videoId?: string;
+  articleId?: string | null;
   order?: number;
   module?: number;
   duration?: number;
@@ -69,6 +71,7 @@ export class AdminLessonService {
         slug: input.slug,
         description: input.description ?? null,
         videoId: input.videoId,
+        articleId: input.articleId ?? null,
         order: input.order ?? 0,
         module: input.module ?? 1,
         duration: input.duration ?? null,
@@ -106,6 +109,7 @@ export class AdminLessonService {
         ...(input.slug !== undefined && { slug: input.slug }),
         ...(input.description !== undefined && { description: input.description }),
         ...(input.videoId !== undefined && { videoId: input.videoId }),
+        ...(input.articleId !== undefined && { articleId: input.articleId }),
         ...(input.order !== undefined && { order: input.order }),
         ...(input.module !== undefined && { module: input.module }),
         ...(input.duration !== undefined && { duration: input.duration }),

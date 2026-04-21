@@ -9,6 +9,7 @@ const NAV_ITEMS = [
   { href: '/admin/dashboard', label: 'Дашборд' },
   { href: '/admin/lessons', label: 'Уроки' },
   { href: '/admin/videos', label: 'Видео' },
+  { href: '/admin/articles', label: 'Статьи PDF' },
   { href: '/admin/reviews', label: 'Отзывы' },
   { href: '/admin/tariffs', label: 'Тарифы' },
   { href: '/admin/users', label: 'Пользователи' },

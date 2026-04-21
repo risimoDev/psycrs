@@ -52,4 +52,9 @@ export async function adminRoutes(app: FastifyInstance) {
   app.post('/tariffs', (req, reply) => adminController.createTariff(req, reply));
   app.patch('/tariffs/:id', (req, reply) => adminController.updateTariff(req, reply));
   app.delete('/tariffs/:id', (req, reply) => adminController.deleteTariff(req, reply));
+
+  // ── Articles ──────────────────────────────────────
+  app.get('/articles', (req, reply) => adminController.listArticles(req, reply));
+  app.post('/articles/upload', (req, reply) => adminController.uploadArticle(req, reply));
+  app.delete('/articles/:id', (req, reply) => adminController.deleteArticle(req, reply));
 }

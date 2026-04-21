@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { adminApi, type AdminLesson, type AdminVideo, type ContentType } from '../../../lib/api';
+import { adminApi, type AdminLesson, type AdminVideo, type AdminArticle, type ContentType } from '../../../lib/api';
 import { Button } from '../../../components/button';
 
 const CONTENT_TYPES: { value: ContentType; label: string }[] = [
@@ -34,6 +34,7 @@ interface LessonFormData {
   description: string;
   contentType: ContentType;
   videoId: string;
+  articleId: string;
   pdfUrl: string;
   order: number;
   duration: number | '';
@@ -58,6 +59,7 @@ function LessonForm({
   const [description, setDescription] = useState(initial?.description ?? '');
   const [contentType, setContentType] = useState<ContentType>(initial?.contentType ?? 'lecture');
   const [videoId, setVideoId] = useState(initial?.videoId ?? '');
+  const [articleId, setArticleId] = useState(initial?.articleId ?? '');
   const [pdfUrl, setPdfUrl] = useState(initial?.pdfUrl ?? '');
   const [order, setOrder] = useState(initial?.order ?? 0);
   const [duration, setDuration] = useState<number | ''>(initial?.duration ?? '');
@@ -66,6 +68,11 @@ function LessonForm({
   const { data: videosData } = useQuery({
     queryKey: ['admin', 'videos', 'ready'],
     queryFn: () => adminApi.videos(1, 100, 'ready'),
+  });
+
+  const { data: articlesData } = useQuery({
+    queryKey: ['admin', 'articles', 'all'],
+    queryFn: () => adminApi.articles(1, 100),
   });
 
   function autoSlug(val: string) {
@@ -91,7 +98,7 @@ function LessonForm({
     <form
       onSubmit={(e) => {
         e.preventDefault();
-        onSubmit({ title, slug, description, contentType, videoId, pdfUrl, order, duration, isPublished });
+        onSubmit({ title, slug, description, contentType, videoId, articleId, pdfUrl, order, duration, isPublished });
       }}
       className="space-y-4 bg-surface border border-foreground/10 rounded-lg p-5"
     >
@@ -216,18 +223,29 @@ function LessonForm({
           </>
         )}
 
-        {/* PDF URL — для статей */}
+        {/* PDF статья — выбор из загруженных */}
         {needsPdf && (
           <div className="col-span-2">
-            <label className="block text-xs font-body text-muted mb-1">Ссылка на PDF *</label>
-            <input
+            <label className="block text-xs font-body text-muted mb-1">Статья PDF *</label>
+            <select
               required={needsPdf}
-              value={pdfUrl}
-              onChange={(e) => setPdfUrl(e.target.value)}
-              placeholder="https://... или /storage/articles/file.pdf"
+              value={articleId}
+              onChange={(e) => setArticleId(e.target.value)}
               className="w-full bg-background border border-foreground/10 rounded px-3 py-2 text-sm text-foreground font-body focus:outline-none focus:border-accent/50"
-            />
-            <p className="text-[10px] text-muted mt-0.5">Прямая ссылка для скачивания/просмотра PDF</p>
+            >
+              <option value="">— Выберите статью —</option>
+              {articlesData?.items.map((a: AdminArticle) => (
+                <option key={a.id} value={a.id}>
+                  {a.originalName}
+                </option>
+              ))}
+            </select>
+            {articlesData?.items.length === 0 && (
+              <p className="text-[11px] text-amber-400 mt-1">
+                Нет загруженных PDF. Сначала загрузите статью в разделе{' '}
+                <a href="/admin/articles" className="underline">Статьи PDF</a>.
+              </p>
+            )}
           </div>
         )}
 
@@ -245,7 +263,7 @@ function LessonForm({
       </div>
 
       <div className="flex gap-3 pt-2">
-        <Button type="submit" size="sm" disabled={loading || (needsVideo && !videoId) || (needsPdf && !pdfUrl)}>
+        <Button type="submit" size="sm" disabled={loading || (needsVideo && !videoId) || (needsPdf && !articleId)}>
           {loading ? 'Сохранение...' : initial ? 'Обновить' : 'Создать'}
         </Button>
         <Button type="button" variant="ghost" size="sm" onClick={onCancel}>
@@ -283,6 +301,7 @@ export default function LessonsPage() {
         description: d.description || undefined,
         contentType: d.contentType,
         videoId: d.videoId || undefined,
+        articleId: d.articleId || undefined,
         pdfUrl: d.pdfUrl || undefined,
         order: d.order,
         duration: d.duration !== '' ? Number(d.duration) : undefined,
@@ -304,6 +323,7 @@ export default function LessonsPage() {
         description: d.description || undefined,
         contentType: d.contentType,
         videoId: d.videoId || undefined,
+        articleId: d.articleId || null,
         pdfUrl: d.pdfUrl || undefined,
         order: d.order,
         duration: d.duration !== '' ? Number(d.duration) : undefined,

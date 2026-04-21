@@ -1,6 +1,6 @@
 'use client';
 
-import { use } from 'react';
+import { use, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
@@ -107,10 +107,30 @@ function VideoContent({ item }: { item: ContentItem }) {
   );
 }
 
-// ─── PDF content ──────────────────────────────────────────
+// ─── PDF content (protected) ──────────────────────────────
+
+const API_BASE = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:3001';
 
 function PdfContent({ item }: { item: ContentItem }) {
-  if (!item.pdfUrl) {
+  const [isFullscreen, setIsFullscreen] = useState(false);
+
+  const {
+    data: tokenData,
+    isLoading,
+    isError,
+    refetch,
+  } = useQuery({
+    queryKey: ['article-token', item.id],
+    queryFn: () => contentApi.requestArticleToken(item.id),
+    staleTime: 20 * 60 * 1000, // reuse token for 20 min (TTL is 30 min)
+    retry: 1,
+  });
+
+  const pdfUrl = tokenData?.token
+    ? `${API_BASE}/articles/read?token=${encodeURIComponent(tokenData.token)}`
+    : null;
+
+  if (!item.articleId && !item.pdfUrl) {
     return (
       <div className="rounded-2xl border border-foreground/10 bg-foreground/[0.02] p-8 text-center">
         <p className="text-foreground/30 font-body text-sm">Файл не прикреплён</p>
@@ -118,31 +138,81 @@ function PdfContent({ item }: { item: ContentItem }) {
     );
   }
 
+  if (isLoading) {
+    return (
+      <div className="w-full rounded-2xl bg-foreground/5 flex items-center justify-center" style={{ height: '520px' }}>
+        <div className="flex flex-col items-center gap-3 text-foreground/30">
+          <div className="w-8 h-8 border-2 border-accent/30 border-t-accent rounded-full animate-spin" />
+          <p className="text-sm font-body">Загрузка статьи...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (isError || !pdfUrl) {
+    return (
+      <div className="w-full rounded-2xl bg-foreground/5 flex flex-col items-center justify-center gap-4 p-8" style={{ height: '360px' }}>
+        <svg className="h-12 w-12 text-foreground/20" fill="none" stroke="currentColor" strokeWidth="1.5" viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v3.75m9-.75a9 9 0 1 1-18 0 9 9 0 0 1 18 0Zm-9 3.75h.008v.008H12v-.008Z" />
+        </svg>
+        <p className="text-foreground/40 font-body text-sm text-center">Не удалось загрузить статью</p>
+        <button
+          onClick={() => refetch()}
+          className="text-sm text-accent hover:underline font-body"
+        >
+          Попробовать снова
+        </button>
+      </div>
+    );
+  }
+
   return (
-    <div className="space-y-4">
-      {/* Inline preview */}
-      <div className="rounded-2xl overflow-hidden border border-foreground/10 bg-foreground/[0.02]">
+    <div className={`relative flex flex-col ${isFullscreen ? 'fixed inset-0 z-50 bg-background p-0' : ''}`}>
+      {/* Toolbar */}
+      <div className={`flex items-center justify-between ${isFullscreen ? 'px-4 py-3 border-b border-foreground/10' : 'mb-3'}`}>
+        {isFullscreen && (
+          <span className="text-sm font-medium font-body text-foreground/80 truncate max-w-xs">{item.title}</span>
+        )}
+        <div className={`flex items-center gap-2 ${isFullscreen ? '' : 'ml-auto'}`}>
+          <button
+            onClick={() => setIsFullscreen((f) => !f)}
+            className="inline-flex items-center gap-1.5 rounded-lg border border-foreground/10 bg-foreground/[0.03] px-3 py-1.5 text-xs font-medium font-body text-foreground/60 hover:bg-foreground/[0.07] hover:text-foreground transition-all"
+            title={isFullscreen ? 'Свернуть' : 'На весь экран'}
+          >
+            {isFullscreen ? (
+              <>
+                <svg className="h-3.5 w-3.5" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M9 9V4.5M9 9H4.5M9 9 3.75 3.75M9 15v4.5M9 15H4.5M9 15l-5.25 5.25M15 9h4.5M15 9V4.5M15 9l5.25-5.25M15 15h4.5M15 15v4.5m0-4.5 5.25 5.25" />
+                </svg>
+                Свернуть
+              </>
+            ) : (
+              <>
+                <svg className="h-3.5 w-3.5" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M3.75 3.75v4.5m0-4.5h4.5m-4.5 0L9 9M3.75 20.25v-4.5m0 4.5h4.5m-4.5 0L9 15M20.25 3.75h-4.5m4.5 0v4.5m0-4.5L15 9m5.25 11.25h-4.5m4.5 0v-4.5m0 4.5L15 15" />
+                </svg>
+                На весь экран
+              </>
+            )}
+          </button>
+        </div>
+      </div>
+
+      {/* PDF iframe — sandbox blocks right-click save/print */}
+      <div className={`rounded-2xl overflow-hidden border border-foreground/10 bg-black ${isFullscreen ? 'flex-1 rounded-none border-0' : ''}`}>
         <iframe
-          src={item.pdfUrl}
+          src={pdfUrl}
           className="w-full"
-          style={{ height: 'min(70vh, 720px)', border: 'none' }}
+          style={{
+            height: isFullscreen ? '100%' : 'min(75vh, 800px)',
+            border: 'none',
+            display: 'block',
+          }}
           title={item.title}
+          sandbox="allow-scripts allow-same-origin"
+          loading="lazy"
         />
       </div>
-      {/* Download fallback */}
-      <a
-        href={item.pdfUrl}
-        target="_blank"
-        rel="noopener noreferrer"
-        className="inline-flex items-center gap-2 text-sm font-medium font-body text-accent hover:underline"
-      >
-        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-          <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
-          <polyline points="7 10 12 15 17 10" />
-          <line x1="12" y1="15" x2="12" y2="3" />
-        </svg>
-        Скачать PDF
-      </a>
     </div>
   );
 }
