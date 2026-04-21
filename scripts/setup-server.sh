@@ -279,7 +279,7 @@ PAYMENT_RETURN_URL=https://${DOMAIN}/payment/result
 SUBSCRIPTION_PRICE=2990
 
 # ─── Frontend (baked into JS bundle at build time) ────────
-NEXT_PUBLIC_API_URL=https://${DOMAIN}
+NEXT_PUBLIC_API_URL=https://${DOMAIN}/api
 NEXT_PUBLIC_SITE_URL=https://${DOMAIN}
 EOF
 

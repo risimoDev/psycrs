@@ -259,7 +259,6 @@ function WhyThisCourseSection() {
 function WhatsInsideSection() {
   const categories = [
     {
-      icon: '🎓',
       title: 'Видео лекции',
       desc: 'Глубокие видеозанятия по когнитивной психологии, эмоциональному интеллекту и психологии отношений. Теория с практическими заданиями.',
       items: [
@@ -271,7 +270,6 @@ function WhatsInsideSection() {
       accent: 'rgba(166,124,82,0.07)',
     },
     {
-      icon: '✨',
       title: 'Аффирмации',
       desc: 'Короткие аудио- и видеоматериалы для ежедневной практики. Помогают закрепить новые установки мышления.',
       items: [
@@ -283,7 +281,6 @@ function WhatsInsideSection() {
       accent: 'rgba(61,107,79,0.07)',
     },
     {
-      icon: '📄',
       title: 'Статьи',
       desc: 'Практические руководства в формате PDF для чтения и хранения. Стратегии, схемы, чек-листы по темам курса.',
       items: [
@@ -323,8 +320,6 @@ function WhatsInsideSection() {
               className="pointer-events-none absolute inset-0 grain opacity-70"
               style={{ background: `radial-gradient(ellipse 80% 70% at 20% 90%, ${cat.accent} 0%, transparent 65%)` }}
             />
-
-            <span className="text-3xl mb-4 block select-none">{cat.icon}</span>
 
             <h3 className="font-heading text-lg font-semibold text-foreground mb-2">{cat.title}</h3>
             <p className="text-[13px] leading-relaxed text-muted mb-5">{cat.desc}</p>
