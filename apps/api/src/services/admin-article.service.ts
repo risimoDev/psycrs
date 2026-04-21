@@ -51,7 +51,7 @@ export class AdminArticleService {
     };
   }
 
-  async upload(stream: Readable, filename: string, fileSize: number | undefined, adminId: string) {
+  async upload(stream: Readable, filename: string, _fileSize: number | undefined, adminId: string) {
     const articleId = randomUUID();
     const safeFilename = filename.replace(/[^a-zA-Z0-9._-]/g, '_');
     const storagePath = this.storagePath();

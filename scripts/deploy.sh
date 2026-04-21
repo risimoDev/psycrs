@@ -81,13 +81,17 @@ run_migrations() {
 build_app() {
   log "Building applications..."
   cd "$APP_DIR"
-
+  
   # NEXT_PUBLIC_* vars are baked into the JS bundle at build time
-  # shellcheck source=/dev/null
   set -a; source "$ENV_FILE"; set +a
 
-  npx turbo build || die "Build failed — aborting deploy. PM2 still running old version."
+  # 🛠 КРИТИЧНО: Всегда перегенерируем Prisma-клиент перед сборкой
+  log "Generating Prisma client..."
+  cd apps/api
+  npx prisma generate
+  cd "$APP_DIR"
 
+  npx turbo build || die "Build failed — aborting deploy. PM2 still running old version."
   log "Build completed"
 }
 
