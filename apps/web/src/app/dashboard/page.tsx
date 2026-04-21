@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import Link from 'next/link';
 import { useQuery, useMutation } from '@tanstack/react-query';
 import { subscriptionApi, contentApi, paymentApi, type ContentItem, type ContentType } from '../../lib/api';
 import { Button } from '../../components/button';
