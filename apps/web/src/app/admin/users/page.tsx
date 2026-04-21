@@ -5,6 +5,69 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { adminApi, type AdminUser } from '../../../lib/api';
 import { Button } from '../../../components/button';
 
+function GrantSubscriptionCell({ user }: { user: AdminUser }) {
+  const queryClient = useQueryClient();
+  const [open, setOpen] = useState(false);
+  const [days, setDays] = useState(30);
+
+  const grantMut = useMutation({
+    mutationFn: () => adminApi.grantSubscription(user.id, days),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['admin', 'users'] });
+      setOpen(false);
+    },
+  });
+
+  const revokeMut = useMutation({
+    mutationFn: () => adminApi.revokeSubscription(user.id),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['admin', 'users'] }),
+  });
+
+  const hasActive =
+    user.subscription?.status === 'active' || user.subscription?.status === 'grace_period';
+
+  if (open) {
+    return (
+      <div className="flex items-center gap-1.5">
+        <input
+          type="number"
+          min={1}
+          max={3650}
+          value={days}
+          onChange={(e) => setDays(Number(e.target.value))}
+          className="w-16 bg-transparent border border-foreground/20 rounded px-2 py-1 text-xs text-foreground focus:outline-none focus:border-accent/40"
+        />
+        <span className="text-xs text-foreground/40">дн.</span>
+        <Button size="sm" variant="primary" loading={grantMut.isPending} onClick={() => grantMut.mutate()}>
+          ОК
+        </Button>
+        <Button size="sm" variant="ghost" onClick={() => setOpen(false)}>
+          ✕
+        </Button>
+      </div>
+    );
+  }
+
+  return (
+    <div className="flex items-center gap-1.5 justify-end">
+      <Button size="sm" variant="outline" onClick={() => setOpen(true)}>
+        Выдать подписку
+      </Button>
+      {hasActive && (
+        <Button
+          size="sm"
+          variant="ghost"
+          loading={revokeMut.isPending}
+          onClick={() => revokeMut.mutate()}
+          className="text-red-400"
+        >
+          Отозвать
+        </Button>
+      )}
+    </div>
+  );
+}
+
 export default function UsersPage() {
   const queryClient = useQueryClient();
   const [page, setPage] = useState(1);
@@ -75,7 +138,7 @@ export default function UsersPage() {
                   <th className="text-left px-4 py-3 text-xs font-medium text-foreground/50 uppercase tracking-wider">Подписка</th>
                   <th className="text-left px-4 py-3 text-xs font-medium text-foreground/50 uppercase tracking-wider">Регистрация</th>
                   <th className="text-left px-4 py-3 text-xs font-medium text-foreground/50 uppercase tracking-wider">Последний вход</th>
-                  <th className="px-4 py-3" />
+                  <th className="px-4 py-3 text-right text-xs font-medium text-foreground/50 uppercase tracking-wider">Действия</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-foreground/5">
@@ -104,26 +167,29 @@ export default function UsersPage() {
                     <td className="px-4 py-3 text-foreground/50">{formatDate(user.createdAt)}</td>
                     <td className="px-4 py-3 text-foreground/50">{formatDate(user.lastLoginAt)}</td>
                     <td className="px-4 py-3 text-right">
-                      {user.isBanned ? (
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          loading={unbanMut.isPending}
-                          onClick={() => unbanMut.mutate(user.id)}
-                        >
-                          Разблокировать
-                        </Button>
-                      ) : (
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          loading={banMut.isPending}
-                          onClick={() => banMut.mutate(user.id)}
-                          className="text-red-400 border-red-500/20 hover:border-red-500/40"
-                        >
-                          Заблокировать
-                        </Button>
-                      )}
+                      <div className="flex items-center justify-end gap-2 flex-wrap">
+                        <GrantSubscriptionCell user={user} />
+                        {user.isBanned ? (
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            loading={unbanMut.isPending}
+                            onClick={() => unbanMut.mutate(user.id)}
+                          >
+                            Разблокировать
+                          </Button>
+                        ) : (
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            loading={banMut.isPending}
+                            onClick={() => banMut.mutate(user.id)}
+                            className="text-red-400 border-red-500/20 hover:border-red-500/40"
+                          >
+                            Заблокировать
+                          </Button>
+                        )}
+                      </div>
                     </td>
                   </tr>
                 ))}

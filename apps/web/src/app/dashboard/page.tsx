@@ -1,9 +1,8 @@
 'use client';
 
 import { useState } from 'react';
-import Link from 'next/link';
-import { useQuery } from '@tanstack/react-query';
-import { subscriptionApi, contentApi, type ContentItem, type ContentType } from '../../lib/api';
+import { useQuery, useMutation } from '@tanstack/react-query';
+import { subscriptionApi, contentApi, paymentApi, type ContentItem, type ContentType } from '../../lib/api';
 import { Button } from '../../components/button';
 import { CheckIcon } from '../../components/icons';
 
@@ -145,6 +144,13 @@ function ContentGrid({ type }: { type: TabId }) {
 // ─── No-subscription state ────────────────────────────────
 
 function NoSubscription() {
+  const payMut = useMutation({
+    mutationFn: paymentApi.create,
+    onSuccess: (data) => {
+      window.location.href = data.confirmationUrl;
+    },
+  });
+
   return (
     <div className="flex flex-col items-center justify-center py-20 px-4 text-center">
       <div
@@ -162,9 +168,12 @@ function NoSubscription() {
       <p className="text-sm text-muted font-body max-w-xs mb-8">
         Для доступа к материалам курса оформите подписку
       </p>
-      <Link href="/#tariffs">
-        <Button size="lg">Выбрать тариф</Button>
-      </Link>
+      {payMut.isError && (
+        <p className="text-sm text-red-400 mb-4">Не удалось создать платёж. Попробуйте ещё раз.</p>
+      )}
+      <Button size="lg" loading={payMut.isPending} onClick={() => payMut.mutate()}>
+        Выбрать тариф
+      </Button>
     </div>
   );
 }

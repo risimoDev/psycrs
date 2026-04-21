@@ -84,35 +84,23 @@ export function DynamicPricingSection() {
   if (isLoading || !tariffs?.length) {
     // Fallback static card while loading
     return (
-      <section id="pricing" className="mx-auto max-w-6xl px-4 py-24 sm:px-6">
-        <div className="mb-14 text-center">
-          <h2 className="font-heading text-3xl font-bold sm:text-4xl">Тарифы</h2>
-        </div>
-        <div className="mx-auto max-w-sm animate-pulse rounded-2xl border border-foreground/10 bg-foreground/5 h-80" />
-      </section>
+      <div className="mx-auto max-w-sm animate-pulse rounded-2xl border border-foreground/10 bg-foreground/5 h-80" />
     );
   }
 
   return (
-    <section id="pricing" className="mx-auto max-w-6xl px-4 py-24 sm:px-6">
-      <div className="mb-14 text-center">
-        <h2 className="font-heading text-3xl font-bold sm:text-4xl">Тарифы</h2>
-        <p className="mt-4 text-muted">Выберите подходящий план и начните учиться уже сегодня</p>
-      </div>
-
-      <div
-        className={`grid gap-6 ${
-          tariffs.length === 1
-            ? 'max-w-sm mx-auto'
-            : tariffs.length === 2
-            ? 'max-w-2xl mx-auto grid-cols-1 sm:grid-cols-2'
-            : 'grid-cols-1 sm:grid-cols-2 lg:grid-cols-3'
-        }`}
-      >
-        {tariffs.map((tariff) => (
-          <TariffCard key={tariff.id} tariff={tariff} />
-        ))}
-      </div>
-    </section>
+    <div
+      className={`grid gap-6 ${
+        tariffs.length === 1
+          ? 'max-w-sm mx-auto'
+          : tariffs.length === 2
+          ? 'max-w-2xl mx-auto grid-cols-1 sm:grid-cols-2'
+          : 'grid-cols-1 sm:grid-cols-2 lg:grid-cols-3'
+      }`}
+    >
+      {tariffs.map((tariff) => (
+        <TariffCard key={tariff.id} tariff={tariff} />
+      ))}
+    </div>
   );
 }
