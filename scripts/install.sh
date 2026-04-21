@@ -59,6 +59,37 @@ check_commands() {
   done
 }
 
+# ─── Ensure Swap Space (prevents OOM on low-RAM VPS) ────────
+
+ensure_swap() {
+  local total_swap
+  total_swap=$(free -m | awk '/^Swap:/{print $2}')
+
+  if [[ "$total_swap" -ge 1024 ]]; then
+    log "Swap: ${total_swap}MB available — OK"
+    return
+  fi
+
+  log "Swap: ${total_swap}MB — creating 2GB swapfile (needed for npm/build)..."
+
+  if [[ -f /swapfile ]]; then
+    swapoff /swapfile 2>/dev/null || true
+    rm -f /swapfile
+  fi
+
+  fallocate -l 2G /swapfile || dd if=/dev/zero of=/swapfile bs=1M count=2048 status=none
+  chmod 600 /swapfile
+  mkswap /swapfile >/dev/null
+  swapon /swapfile
+
+  # Persist across reboots
+  if ! grep -q '/swapfile' /etc/fstab; then
+    echo '/swapfile none swap sw 0 0' >> /etc/fstab
+  fi
+
+  log "Swap: 2GB swapfile created and activated"
+}
+
 # ─── Install Dependencies ────────────────────────────────
 
 install_deps() {
@@ -227,6 +258,7 @@ main() {
 
   check_commands
   check_env
+  ensure_swap
   install_deps
   run_migrations
   build_app
