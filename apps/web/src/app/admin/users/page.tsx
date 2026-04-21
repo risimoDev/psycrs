@@ -68,6 +68,48 @@ function GrantSubscriptionCell({ user }: { user: AdminUser }) {
   );
 }
 
+function RoleToggleCell({ user }: { user: AdminUser }) {
+  const queryClient = useQueryClient();
+
+  const roleMut = useMutation({
+    mutationFn: (role: 'admin' | 'user') => adminApi.setUserRole(user.id, role),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['admin', 'users'] }),
+  });
+
+  if (user.role === 'admin') {
+    return (
+      <Button
+        size="sm"
+        variant="outline"
+        loading={roleMut.isPending}
+        onClick={() => {
+          if (confirm(`Забрать права администратора у ${user.email}?`)) {
+            roleMut.mutate('user');
+          }
+        }}
+        className="text-yellow-500 border-yellow-500/20 hover:border-yellow-500/40"
+      >
+        Снять админа
+      </Button>
+    );
+  }
+
+  return (
+    <Button
+      size="sm"
+      variant="outline"
+      loading={roleMut.isPending}
+      onClick={() => {
+        if (confirm(`Назначить ${user.email} администратором?`)) {
+          roleMut.mutate('admin');
+        }
+      }}
+    >
+      Сделать админом
+    </Button>
+  );
+}
+
 export default function UsersPage() {
   const queryClient = useQueryClient();
   const [page, setPage] = useState(1);
@@ -158,7 +200,11 @@ export default function UsersPage() {
                           user.subscription.status === 'grace_period' ? 'bg-yellow-500/15 text-yellow-400' :
                           'bg-foreground/5 text-foreground/40'
                         }`}>
-                          {user.subscription.status}
+                          {user.subscription.status === 'active' ? 'Активна' :
+                           user.subscription.status === 'grace_period' ? 'Льготный период' :
+                           user.subscription.status === 'expired' ? 'Истекла' :
+                           user.subscription.status === 'cancelled' ? 'Отменена' :
+                           user.subscription.status}
                         </span>
                       ) : (
                         <span className="text-foreground/30">—</span>
@@ -169,6 +215,7 @@ export default function UsersPage() {
                     <td className="px-4 py-3 text-right">
                       <div className="flex items-center justify-end gap-2 flex-wrap">
                         <GrantSubscriptionCell user={user} />
+                        <RoleToggleCell user={user} />
                         {user.isBanned ? (
                           <Button
                             size="sm"

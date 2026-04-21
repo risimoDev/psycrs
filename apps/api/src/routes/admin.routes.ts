@@ -32,6 +32,7 @@ export async function adminRoutes(app: FastifyInstance) {
   app.get('/users/:id', (req, reply) => adminController.getUser(req, reply));
   app.post('/users/:id/ban', (req, reply) => adminController.banUser(req, reply));
   app.post('/users/:id/unban', (req, reply) => adminController.unbanUser(req, reply));
+  app.post('/users/:id/role', (req, reply) => adminController.setUserRole(req, reply));
 
   // ── Subscriptions ─────────────────────────────────
   app.get('/subscriptions', (req, reply) => adminController.listSubscriptions(req, reply));

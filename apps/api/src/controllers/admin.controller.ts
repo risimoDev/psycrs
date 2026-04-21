@@ -306,6 +306,13 @@ export class AdminController {
     return reply.send(user);
   }
 
+  async setUserRole(request: FastifyRequest, reply: FastifyReply) {
+    const { id } = idParamSchema.parse(request.params);
+    const { role } = z.object({ role: z.enum(['admin', 'user']) }).parse(request.body);
+    const user = await adminUserService.setRole(id, role, request.userId);
+    return reply.send(user);
+  }
+
   // ── Subscription Grant/Revoke ───────────────────────
 
   async grantSubscription(request: FastifyRequest, reply: FastifyReply) {

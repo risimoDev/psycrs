@@ -540,6 +540,8 @@ export const adminApi = {
     request<AdminUser>(`/admin/users/${userId}/ban`, { method: 'POST' }),
   unbanUser: (userId: string) =>
     request<AdminUser>(`/admin/users/${userId}/unban`, { method: 'POST' }),
+  setUserRole: (userId: string, role: 'admin' | 'user') =>
+    request<AdminUser>(`/admin/users/${userId}/role`, { method: 'POST', body: { role } }),
 
   // Reviews
   reviews: (page = 1, limit = 50) =>

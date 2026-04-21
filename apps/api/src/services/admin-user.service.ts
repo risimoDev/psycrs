@@ -145,6 +145,34 @@ export class AdminUserService {
     return updated;
   }
 
+  async setRole(userId: string, role: 'admin' | 'user', adminId: string) {
+    const user = await prisma.user.findUnique({ where: { id: userId } });
+    if (!user) throw new NotFoundError('User');
+
+    const updated = await prisma.user.update({
+      where: { id: userId },
+      data: { role },
+      select: {
+        id: true,
+        email: true,
+        role: true,
+        isBanned: true,
+        createdAt: true,
+      },
+    });
+
+    await auditService.log({
+      adminId,
+      action: 'set_role',
+      entity: 'user',
+      entityId: userId,
+      details: { email: user.email, role },
+    });
+
+    this.logger.info({ userId, role, adminId }, `User role set to ${role}`);
+    return updated;
+  }
+
   /** Called from auth service on login to track IP and user-agent */
   async trackLogin(userId: string, ip: string, userAgent: string) {
     await prisma.user.update({

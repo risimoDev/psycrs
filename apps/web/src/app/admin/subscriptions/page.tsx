@@ -7,14 +7,14 @@ import { adminApi, type AdminSubscription } from '../../../lib/api';
 const STATUS_OPTIONS = [
   { value: '', label: 'Все' },
   { value: 'active', label: 'Активные' },
-  { value: 'grace_period', label: 'Grace period' },
+  { value: 'grace_period', label: 'Льготный период' },
   { value: 'expired', label: 'Истекшие' },
   { value: 'cancelled', label: 'Отменённые' },
 ];
 
 const statusLabels: Record<string, string> = {
   active: 'Активна',
-  grace_period: 'Grace',
+  grace_period: 'Льготный',
   expired: 'Истекла',
   cancelled: 'Отменена',
 };

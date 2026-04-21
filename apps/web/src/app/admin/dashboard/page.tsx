@@ -40,9 +40,9 @@ export default function DashboardPage() {
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
         <StatCard label="Пользователи" value={data.totalUsers} />
         <StatCard label="Активные подписки" value={data.activeSubscriptions} />
-        <StatCard label="MRR" value={formatCurrency(data.mrr)} />
+        <StatCard label="Ежемес. доход" value={formatCurrency(data.mrr)} />
         <StatCard
-          label="Churn rate"
+          label="Отток"
           value={`${data.churnRate}%`}
           sub={`${data.expiredSubscriptions} из ${data.activeSubscriptions + data.gracePeriodSubscriptions + data.expiredSubscriptions}`}
         />
@@ -62,7 +62,7 @@ export default function DashboardPage() {
               <span className="text-foreground">{data.totalPayments}</span>
             </div>
             <div className="flex justify-between font-body text-sm">
-              <span className="text-foreground/60">Grace period</span>
+              <span className="text-foreground/60">Льготный период</span>
               <span className="text-foreground">{data.gracePeriodSubscriptions}</span>
             </div>
           </div>
@@ -117,23 +117,23 @@ export default function DashboardPage() {
           <h2 className="font-heading text-lg font-semibold text-foreground mb-4">Вовлечённость</h2>
           <div className="grid grid-cols-2 lg:grid-cols-3 gap-4">
             <div>
-              <p className="text-xs font-body text-foreground/50 uppercase tracking-wider">DAU</p>
+              <p className="text-xs font-body text-foreground/50 uppercase tracking-wider">Активны за день</p>
               <p className="text-xl font-heading font-semibold text-foreground">{retention.dau}</p>
             </div>
             <div>
-              <p className="text-xs font-body text-foreground/50 uppercase tracking-wider">WAU</p>
+              <p className="text-xs font-body text-foreground/50 uppercase tracking-wider">Активны за неделю</p>
               <p className="text-xl font-heading font-semibold text-foreground">{retention.wau}</p>
             </div>
             <div>
-              <p className="text-xs font-body text-foreground/50 uppercase tracking-wider">MAU</p>
+              <p className="text-xs font-body text-foreground/50 uppercase tracking-wider">Активны за месяц</p>
               <p className="text-xl font-heading font-semibold text-foreground">{retention.mau}</p>
             </div>
             <div>
-              <p className="text-xs font-body text-foreground/50 uppercase tracking-wider">Retention 7d</p>
+              <p className="text-xs font-body text-foreground/50 uppercase tracking-wider">Удержание 7 дней</p>
               <p className="text-xl font-heading font-semibold text-foreground">{retention.retention7d}%</p>
             </div>
             <div>
-              <p className="text-xs font-body text-foreground/50 uppercase tracking-wider">Retention 30d</p>
+              <p className="text-xs font-body text-foreground/50 uppercase tracking-wider">Удержание 30 дней</p>
               <p className="text-xl font-heading font-semibold text-foreground">{retention.retention30d}%</p>
             </div>
             <div>
