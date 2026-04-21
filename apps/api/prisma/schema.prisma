@@ -1,0 +1,272 @@
+generator client {
+    provider = "prisma-client-js"
+}
+
+datasource db {
+    provider = "postgresql"
+    url      = env("DATABASE_URL")
+}
+
+// ─── Enums ───────────────────────────────────────────────
+
+enum UserRole {
+    user
+    admin
+}
+
+enum SubscriptionStatus {
+    active
+    grace_period
+    expired
+    cancelled
+}
+
+enum PaymentStatus {
+    pending
+    succeeded
+    canceled
+}
+
+enum VideoStatus {
+    uploading
+    processing
+    ready
+    error
+}
+
+// ─── Models ──────────────────────────────────────────────
+
+model User {
+    id            String    @id @default(uuid()) @db.Uuid
+    email         String    @unique
+    passwordHash  String    @map("password_hash")
+    role          UserRole  @default(user)
+    isBanned      Boolean   @default(false) @map("is_banned")
+    lastIp        String?   @map("last_ip")
+    lastUserAgent String?   @map("last_user_agent")
+    lastLoginAt   DateTime? @map("last_login_at")
+    createdAt     DateTime  @default(now()) @map("created_at")
+
+    subscription    Subscription?
+    payments        Payment[]
+    videoTokens     VideoToken[]
+    refreshTokens   RefreshToken[]
+    auditLogs       AuditLog[]
+    progress        Progress[]
+    videoAccessLogs VideoAccessLog[]
+
+    @@index([role])
+    @@map("users")
+}
+
+model Subscription {
+    id               String             @id @default(uuid()) @db.Uuid
+    userId           String             @unique @map("user_id") @db.Uuid
+    status           SubscriptionStatus @default(active)
+    currentPeriodEnd DateTime           @map("current_period_end")
+    retryCount       Int                @default(0) @map("retry_count")
+    nextRetryAt      DateTime?          @map("next_retry_at")
+    createdAt        DateTime           @default(now()) @map("created_at")
+    updatedAt        DateTime           @updatedAt @map("updated_at")
+
+    user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+    @@index([status])
+    @@index([currentPeriodEnd])
+    @@index([nextRetryAt])
+    @@map("subscriptions")
+}
+
+model Payment {
+    id              String        @id @default(uuid()) @db.Uuid
+    userId          String        @map("user_id") @db.Uuid
+    externalId      String?       @unique @map("external_id")
+    idempotenceKey  String        @unique @map("idempotence_key")
+    amount          Decimal       @db.Decimal(10, 2)
+    currency        String        @default("RUB") @db.VarChar(3)
+    status          PaymentStatus @default(pending)
+    description     String?
+    confirmationUrl String?       @map("confirmation_url")
+    createdAt       DateTime      @default(now()) @map("created_at")
+    updatedAt       DateTime      @updatedAt @map("updated_at")
+
+    user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+    @@index([userId])
+    @@index([status])
+    @@map("payments")
+}
+
+model Lesson {
+    id          String   @id @default(uuid()) @db.Uuid
+    title       String
+    slug        String   @unique
+    description String?
+    order       Int      @default(0)
+    module      Int      @default(1)
+    videoId     String?  @map("video_id") @db.Uuid
+    duration    Int?
+    isPublished Boolean  @default(false) @map("is_published")
+    createdAt   DateTime @default(now()) @map("created_at")
+    updatedAt   DateTime @default(now()) @updatedAt @map("updated_at")
+
+    video    Video?     @relation(fields: [videoId], references: [id], onDelete: SetNull)
+    progress Progress[]
+
+    @@index([order])
+    @@index([module])
+    @@map("lessons")
+}
+
+model Video {
+    id           String      @id @default(uuid()) @db.Uuid
+    filename     String
+    originalName String      @map("original_name")
+    status       VideoStatus @default(uploading)
+    duration     Int?
+    size         BigInt?
+    createdAt    DateTime    @default(now()) @map("created_at")
+    updatedAt    DateTime    @default(now()) @updatedAt @map("updated_at")
+
+    lessons Lesson[]
+
+    @@index([status])
+    @@map("videos")
+}
+
+model Setting {
+    id        String   @id @default(uuid()) @db.Uuid
+    key       String   @unique
+    value     String
+    updatedAt DateTime @default(now()) @updatedAt @map("updated_at")
+
+    @@map("settings")
+}
+
+model VideoToken {
+    id        String    @id @default(uuid()) @db.Uuid
+    userId    String    @map("user_id") @db.Uuid
+    tokenHash String    @map("token_hash")
+    issuedIp  String?   @map("issued_ip")
+    expiresAt DateTime  @map("expires_at")
+    revokedAt DateTime? @map("revoked_at")
+
+    user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+    @@index([tokenHash])
+    @@index([expiresAt])
+    @@index([userId])
+    @@map("video_tokens")
+}
+
+model RefreshToken {
+    id             String    @id @default(uuid()) @db.Uuid
+    userId         String    @map("user_id") @db.Uuid
+    tokenHash      String    @unique @map("token_hash")
+    expiresAt      DateTime  @map("expires_at")
+    revokedAt      DateTime? @map("revoked_at")
+    replacedByHash String?   @map("replaced_by_hash")
+    createdAt      DateTime  @default(now()) @map("created_at")
+
+    user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+    @@index([userId])
+    @@index([expiresAt])
+    @@map("refresh_tokens")
+}
+
+model WebhookLog {
+    id          String   @id @default(uuid()) @db.Uuid
+    provider    String
+    eventId     String   @unique @map("event_id")
+    payload     Json?
+    processedAt DateTime @default(now()) @map("processed_at")
+
+    @@index([provider])
+    @@map("webhook_logs")
+}
+
+model AuditLog {
+    id        String   @id @default(uuid()) @db.Uuid
+    adminId   String   @map("admin_id") @db.Uuid
+    action    String
+    entity    String
+    entityId  String?  @map("entity_id")
+    details   Json?
+    createdAt DateTime @default(now()) @map("created_at")
+
+    admin User @relation(fields: [adminId], references: [id], onDelete: Cascade)
+
+    @@index([adminId])
+    @@index([entity, entityId])
+    @@index([createdAt])
+    @@map("audit_logs")
+}
+
+model Progress {
+    id           String   @id @default(uuid()) @db.Uuid
+    userId       String   @map("user_id") @db.Uuid
+    lessonId     String   @map("lesson_id") @db.Uuid
+    progress     Float    @default(0) // 0-100 percentage
+    lastPosition Float    @default(0) @map("last_position") // seconds in video
+    updatedAt    DateTime @updatedAt @map("updated_at")
+    createdAt    DateTime @default(now()) @map("created_at")
+
+    user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+    lesson Lesson @relation(fields: [lessonId], references: [id], onDelete: Cascade)
+
+    @@unique([userId, lessonId])
+    @@index([userId])
+    @@map("progress")
+}
+
+model Review {
+    id        String   @id @default(uuid()) @db.Uuid
+    name      String
+    role      String?
+    text      String?
+    imageUrl  String?  @map("image_url")
+    order     Int      @default(0)
+    isVisible Boolean  @default(true) @map("is_visible")
+    createdAt DateTime @default(now()) @map("created_at")
+    updatedAt DateTime @updatedAt @map("updated_at")
+
+    @@index([order])
+    @@map("reviews")
+}
+
+model VideoAccessLog {
+    id        String   @id @default(uuid()) @db.Uuid
+    userId    String   @map("user_id") @db.Uuid
+    videoId   String   @map("video_id")
+    file      String?
+    ip        String?
+    userAgent String?  @map("user_agent")
+    createdAt DateTime @default(now()) @map("created_at")
+
+    user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+    @@index([userId])
+    @@index([videoId])
+    @@index([createdAt])
+    @@map("video_access_logs")
+}
+
+model Tariff {
+    id          String   @id @default(uuid()) @db.Uuid
+    title       String
+    description String?
+    price       Int // price in kopecks (e.g. 299000 = 2990.00 RUB)
+    oldPrice    Int?     @map("old_price") // strikethrough "was" price in kopecks
+    period      String   @default("month") // month, year, lifetime
+    features    String[] @default([])
+    isActive    Boolean  @default(true) @map("is_active")
+    isPopular   Boolean  @default(false) @map("is_popular")
+    order       Int      @default(0)
+    createdAt   DateTime @default(now()) @map("created_at")
+    updatedAt   DateTime @updatedAt @map("updated_at")
+
+    @@index([order])
+    @@index([isActive])
+    @@map("tariffs")
+}
