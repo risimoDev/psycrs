@@ -2,6 +2,7 @@ import { prisma } from '../lib/prisma.js';
 import { getLogger } from '../lib/logger.js';
 import { NotFoundError, ConflictError } from '../lib/errors.js';
 import { auditService } from './audit.service.js';
+import { type ContentType } from '@prisma/client';
 
 interface CreateLessonInput {
   title: string;
@@ -12,6 +13,8 @@ interface CreateLessonInput {
   module?: number;
   duration?: number;
   isPublished?: boolean;
+  contentType?: ContentType;
+  pdfUrl?: string;
 }
 
 interface UpdateLessonInput {
@@ -23,6 +26,8 @@ interface UpdateLessonInput {
   module?: number;
   duration?: number;
   isPublished?: boolean;
+  contentType?: ContentType;
+  pdfUrl?: string | null;
 }
 
 interface LessonListQuery {
@@ -68,6 +73,8 @@ export class AdminLessonService {
         module: input.module ?? 1,
         duration: input.duration ?? null,
         isPublished: input.isPublished ?? false,
+        contentType: input.contentType ?? 'lecture',
+        pdfUrl: input.pdfUrl ?? null,
       },
     });
 
@@ -103,6 +110,8 @@ export class AdminLessonService {
         ...(input.module !== undefined && { module: input.module }),
         ...(input.duration !== undefined && { duration: input.duration }),
         ...(input.isPublished !== undefined && { isPublished: input.isPublished }),
+        ...(input.contentType !== undefined && { contentType: input.contentType }),
+        ...(input.pdfUrl !== undefined && { pdfUrl: input.pdfUrl }),
       },
     });
 

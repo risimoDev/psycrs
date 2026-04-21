@@ -26,6 +26,8 @@ const createLessonSchema = z.object({
   module: z.number().int().min(1).optional(),
   duration: z.number().int().min(0).optional(),
   isPublished: z.boolean().optional(),
+  contentType: z.enum(['lecture', 'affirmation', 'article_pdf']).optional(),
+  pdfUrl: z.string().url().optional(),
 });
 
 const updateLessonSchema = z.object({
@@ -37,6 +39,8 @@ const updateLessonSchema = z.object({
   module: z.number().int().min(1).optional(),
   duration: z.number().int().min(0).optional(),
   isPublished: z.boolean().optional(),
+  contentType: z.enum(['lecture', 'affirmation', 'article_pdf']).optional(),
+  pdfUrl: z.string().url().nullable().optional(),
 });
 
 const idParamSchema = z.object({

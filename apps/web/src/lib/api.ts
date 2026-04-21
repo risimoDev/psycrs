@@ -183,6 +183,21 @@ export interface Lesson {
   module: number;
 }
 
+export type ContentType = 'lecture' | 'affirmation' | 'article_pdf';
+
+export interface ContentItem {
+  id: string;
+  title: string;
+  slug: string;
+  description: string | null;
+  order: number;
+  contentType: ContentType;
+  pdfUrl: string | null;
+  duration: number | null;
+  videoId: string | null;
+  isMarkedViewed: boolean;
+}
+
 export interface PlaybackToken {
   playbackUrl: string;
   drm?: {
@@ -200,6 +215,21 @@ export const videoApi = {
     request<PlaybackToken>('/video/request-playback', {
       method: 'POST',
       body: { lessonId },
+    }),
+};
+
+// ─── Content (dashboard library) ───────────────────────
+
+export const contentApi = {
+  list: (type: ContentType) =>
+    request<ContentItem[]>(`/content?type=${encodeURIComponent(type)}`),
+
+  getById: (id: string) => request<ContentItem>(`/content/${id}`),
+
+  markViewed: (id: string, viewed: boolean) =>
+    request<{ isMarkedViewed: boolean }>(`/content/${id}/mark-viewed`, {
+      method: 'POST',
+      body: { viewed },
     }),
 };
 
@@ -309,6 +339,8 @@ export interface AdminLesson {
   videoId: string;
   duration: number | null;
   isPublished: boolean;
+  contentType: ContentType;
+  pdfUrl: string | null;
   createdAt: string;
   updatedAt: string;
 }

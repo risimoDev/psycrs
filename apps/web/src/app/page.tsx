@@ -55,8 +55,8 @@ function HeroSection() {
               <ArrowRightIcon size={18} />
             </Button>
           </Link>
-          <Link href="#program" className="text-sm text-muted transition-colors hover:text-foreground">
-            Посмотреть программу ↓
+          <Link href="#inside" className="text-sm text-muted transition-colors hover:text-foreground">
+            Что внутри ↓
           </Link>
         </div>
       </div>
@@ -198,7 +198,7 @@ function HowItWorksSection() {
 /* ─── Для кого и Преимущества — объединённая секция ─── */
 function WhyThisCourseSection() {
   return (
-    <section className="mx-auto max-w-5xl px-4 py-20 sm:px-6">
+    <section id="for-whom" className="mx-auto max-w-5xl px-4 py-20 sm:px-6">
       <div className="grid gap-16 lg:grid-cols-2 lg:items-start">
         {/* Левая колонка — для кого */}
         <div>
@@ -255,75 +255,88 @@ function WhyThisCourseSection() {
   );
 }
 
-/* ─── Программа курса ─── */
-function ProgramSection() {
-  const modules = [
+/* ─── Что внутри — 3 категории контента ─── */
+function WhatsInsideSection() {
+  const categories = [
     {
-      num: '01',
-      title: 'Основы когнитивной психологии',
-      desc: 'Мышление, восприятие, память. Когнитивные искажения и их влияние.',
-      lessons: 4,
+      icon: '🎓',
+      title: 'Видео лекции',
+      desc: 'Глубокие видеозанятия по когнитивной психологии, эмоциональному интеллекту и психологии отношений. Теория с практическими заданиями.',
+      items: [
+        'Когнитивные искажения и как ими управлять',
+        'Эмоциональный интеллект на практике',
+        'Психология отношений и границ',
+        'Работа со стрессом и тревогой',
+      ],
+      accent: 'rgba(166,124,82,0.07)',
     },
     {
-      num: '02',
-      title: 'Эмоциональный интеллект',
-      desc: 'Распознавание эмоций, саморефлексия, работа с тревогой.',
-      lessons: 4,
+      icon: '✨',
+      title: 'Аффирмации',
+      desc: 'Короткие аудио- и видеоматериалы для ежедневной практики. Помогают закрепить новые установки мышления.',
+      items: [
+        'Утренние и вечерние практики',
+        'Работа с внутренним диалогом',
+        'Техники осознанности',
+        'Закрепление положительного мышления',
+      ],
+      accent: 'rgba(61,107,79,0.07)',
     },
     {
-      num: '03',
-      title: 'Психология отношений',
-      desc: 'Привязанность, границы, коммуникация. Здоровые отношения.',
-      lessons: 4,
-    },
-    {
-      num: '04',
-      title: 'Самосаботаж и мотивация',
-      desc: 'Прокрастинация, перфекционизм, синдром самозванца.',
-      lessons: 4,
-    },
-    {
-      num: '05',
-      title: 'Телесная осознанность',
-      desc: 'Связь тела и психики. Релаксация, дыхательные техники, практики внимательности.',
-      lessons: 4,
-    },
-    {
-      num: '06',
-      title: 'Интеграция и практика',
-      desc: 'Обобщение. Индивидуальный план развития, точки роста.',
-      lessons: 4,
+      icon: '📄',
+      title: 'Статьи',
+      desc: 'Практические руководства в формате PDF для чтения и хранения. Стратегии, схемы, чек-листы по темам курса.',
+      items: [
+        'Схемы и инструменты психологии',
+        'Практические чек-листы',
+        'Разбор конкретных ситуаций',
+        'Дополнительные материалы к урокам',
+      ],
+      accent: 'rgba(166,124,82,0.04)',
     },
   ];
 
   return (
-    <section id="program" className="mx-auto max-w-5xl px-4 py-20 sm:px-6">
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
+    <section id="inside" className="mx-auto max-w-5xl px-4 py-20 sm:px-6">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between mb-12">
         <div>
           <div className="accent-line mb-5" />
-          <h2 className="text-2xl font-bold sm:text-3xl">Программа курса</h2>
-          <p className="mt-2 text-sm text-muted">6 модулей, 24 урока, от теории к практике</p>
+          <h2 className="text-2xl font-bold sm:text-3xl">Что внутри</h2>
+          <p className="mt-2 text-sm text-muted">Три формата материалов — выбирайте удобный для вас</p>
         </div>
+        <Link
+          href="/dashboard"
+          className="inline-flex items-center gap-1.5 text-sm font-medium text-accent hover:underline"
+        >
+          Открыть кабинет
+          <ArrowRightIcon size={15} />
+        </Link>
       </div>
 
-      <div className="mt-12 space-y-3">
-        {modules.map((m) => (
+      <div className="grid gap-5 sm:grid-cols-3">
+        {categories.map((cat) => (
           <div
-            key={m.num}
-            className="group flex items-start gap-5 rounded-xl border border-foreground/5 bg-surface/50 px-6 py-5 transition-all hover:border-accent/15 hover:bg-surface"
+            key={cat.title}
+            className="relative overflow-hidden rounded-2xl border border-foreground/[0.07] bg-surface p-6 transition-all hover:border-accent/20 hover:shadow-md hover:shadow-foreground/[0.04] hover:-translate-y-0.5"
           >
-            <span className="font-heading text-2xl font-bold text-accent/25 group-hover:text-accent/50 transition-colors leading-none mt-0.5 shrink-0 w-8">
-              {m.num}
-            </span>
-            <div className="flex-1 min-w-0">
-              <div className="flex items-start justify-between gap-4">
-                <h3 className="text-[15px] font-semibold">{m.title}</h3>
-                <span className="shrink-0 text-xs text-muted bg-foreground/[0.03] rounded-full px-2.5 py-1">
-                  {m.lessons} урока
-                </span>
-              </div>
-              <p className="mt-1.5 text-[14px] text-muted">{m.desc}</p>
-            </div>
+            <div
+              className="pointer-events-none absolute inset-0 grain opacity-70"
+              style={{ background: `radial-gradient(ellipse 80% 70% at 20% 90%, ${cat.accent} 0%, transparent 65%)` }}
+            />
+
+            <span className="text-3xl mb-4 block select-none">{cat.icon}</span>
+
+            <h3 className="font-heading text-lg font-semibold text-foreground mb-2">{cat.title}</h3>
+            <p className="text-[13px] leading-relaxed text-muted mb-5">{cat.desc}</p>
+
+            <ul className="space-y-2">
+              {cat.items.map((item) => (
+                <li key={item} className="flex items-start gap-2.5 text-[13px] text-foreground/70">
+                  <CheckIcon size={13} className="text-accent mt-0.5 shrink-0" />
+                  {item}
+                </li>
+              ))}
+            </ul>
           </div>
         ))}
       </div>
@@ -347,10 +360,10 @@ function TestimonialsSection() {
 /* ─── Стоимость ─── */
 function PricingSection() {
   return (
-    <section id="pricing" className="bg-warm/30 py-20">
+    <section id="tariffs" className="bg-warm/30 py-20">
       <div className="mx-auto max-w-5xl px-4 sm:px-6">
         <div className="text-center mb-12">
-          <h2 className="text-2xl font-bold sm:text-3xl">Стоимость</h2>
+          <h2 className="text-2xl font-bold sm:text-3xl">Тарифы</h2>
           <p className="mt-2 text-[15px] text-muted">
             Полный доступ ко всем урокам. Без скрытых платежей.
           </p>
@@ -448,7 +461,7 @@ export default function HomePage() {
         <AboutSection />
         <HowItWorksSection />
         <WhyThisCourseSection />
-        <ProgramSection />
+        <WhatsInsideSection />
         <TestimonialsSection />
         <PricingSection />
         <FAQSection />

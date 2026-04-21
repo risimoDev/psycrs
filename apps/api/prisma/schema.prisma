@@ -34,6 +34,12 @@ enum VideoStatus {
     error
 }
 
+enum ContentType {
+    lecture
+    affirmation
+    article_pdf
+}
+
 // ─── Models ──────────────────────────────────────────────
 
 model User {
@@ -98,23 +104,26 @@ model Payment {
 }
 
 model Lesson {
-    id          String   @id @default(uuid()) @db.Uuid
+    id          String      @id @default(uuid()) @db.Uuid
     title       String
-    slug        String   @unique
+    slug        String      @unique
     description String?
-    order       Int      @default(0)
-    module      Int      @default(1)
-    videoId     String?  @map("video_id") @db.Uuid
+    order       Int         @default(0)
+    module      Int         @default(1)
+    videoId     String?     @map("video_id") @db.Uuid
     duration    Int?
-    isPublished Boolean  @default(false) @map("is_published")
-    createdAt   DateTime @default(now()) @map("created_at")
-    updatedAt   DateTime @default(now()) @updatedAt @map("updated_at")
+    contentType ContentType @default(lecture) @map("content_type")
+    pdfUrl      String?     @map("pdf_url")
+    isPublished Boolean     @default(false) @map("is_published")
+    createdAt   DateTime    @default(now()) @map("created_at")
+    updatedAt   DateTime    @default(now()) @updatedAt @map("updated_at")
 
     video    Video?     @relation(fields: [videoId], references: [id], onDelete: SetNull)
     progress Progress[]
 
     @@index([order])
     @@index([module])
+    @@index([contentType])
     @@map("lessons")
 }
 
@@ -204,13 +213,14 @@ model AuditLog {
 }
 
 model Progress {
-    id           String   @id @default(uuid()) @db.Uuid
-    userId       String   @map("user_id") @db.Uuid
-    lessonId     String   @map("lesson_id") @db.Uuid
-    progress     Float    @default(0) // 0-100 percentage
-    lastPosition Float    @default(0) @map("last_position") // seconds in video
-    updatedAt    DateTime @updatedAt @map("updated_at")
-    createdAt    DateTime @default(now()) @map("created_at")
+    id             String   @id @default(uuid()) @db.Uuid
+    userId         String   @map("user_id") @db.Uuid
+    lessonId       String   @map("lesson_id") @db.Uuid
+    progress       Float    @default(0) // 0-100 percentage
+    lastPosition   Float    @default(0) @map("last_position") // seconds in video
+    isMarkedViewed Boolean  @default(false) @map("is_marked_viewed")
+    updatedAt      DateTime @updatedAt @map("updated_at")
+    createdAt      DateTime @default(now()) @map("created_at")
 
     user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
     lesson Lesson @relation(fields: [lessonId], references: [id], onDelete: Cascade)

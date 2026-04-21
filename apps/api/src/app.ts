@@ -15,6 +15,7 @@ import { settingsRoutes } from './routes/settings.routes.js';
 import { subscriptionRoutes } from './routes/subscription.routes.js';
 import { tariffRoutes } from './routes/tariff.routes.js';
 import { videoRoutes } from './routes/video.routes.js';
+import { contentRoutes } from './routes/content.routes.js';
 
 // Augment FastifyRequest globally with auth context
 declare module 'fastify' {
@@ -80,6 +81,7 @@ export async function buildApp(): Promise<FastifyInstance> {
   // ─── Routes ───────────────────────────────────────
   await app.register(authRoutes, { prefix: '/auth' });
   await app.register(videoRoutes, { prefix: '/video' });
+  await app.register(contentRoutes, { prefix: '/content' });
   await app.register(progressRoutes, { prefix: '/progress' });
   await app.register(paymentRoutes, { prefix: '/payment' });
   await app.register(subscriptionRoutes, { prefix: '/subscription' });

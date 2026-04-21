@@ -61,10 +61,10 @@ export function Header() {
           {isAuthenticated ? (
             <>
               <Link
-                href="/course"
+                href="/dashboard"
                 className="rounded px-3 py-2 text-sm font-medium text-foreground/70 transition-colors hover:text-foreground hover:bg-foreground/5"
               >
-                Курс
+                Личный кабинет
               </Link>
               {user?.role === 'admin' && (
                 <Link
@@ -88,16 +88,28 @@ export function Header() {
           ) : (
             <>
               <Link
-                href="/#program"
+                href="/#about"
                 className="rounded px-3 py-2 text-sm font-medium text-foreground/70 transition-colors hover:text-foreground hover:bg-foreground/5"
               >
-                Программа
+                Обо мне
               </Link>
               <Link
-                href="/subscribe"
+                href="/#for-whom"
                 className="rounded px-3 py-2 text-sm font-medium text-foreground/70 transition-colors hover:text-foreground hover:bg-foreground/5"
               >
-                Подписка
+                Для кого
+              </Link>
+              <Link
+                href="/#inside"
+                className="rounded px-3 py-2 text-sm font-medium text-foreground/70 transition-colors hover:text-foreground hover:bg-foreground/5"
+              >
+                Что внутри
+              </Link>
+              <Link
+                href="/#tariffs"
+                className="rounded px-3 py-2 text-sm font-medium text-foreground/70 transition-colors hover:text-foreground hover:bg-foreground/5"
+              >
+                Тарифы
               </Link>
               <ThemeToggle />
               <Link
@@ -107,10 +119,10 @@ export function Header() {
                 Войти
               </Link>
               <Link
-                href="/auth/register"
+                href="/dashboard"
                 className="rounded bg-accent px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-accent/85"
               >
-                Начать
+                Личный кабинет
               </Link>
             </>
           )}
@@ -144,11 +156,11 @@ export function Header() {
             {isAuthenticated ? (
               <>
                 <Link
-                  href="/course"
+                  href="/dashboard"
                   onClick={() => setMobileOpen(false)}
                   className="rounded px-3 py-2.5 text-sm font-medium text-foreground/70 transition-colors hover:bg-foreground/5"
                 >
-                  Курс
+                  Личный кабинет
                 </Link>
                 {user?.role === 'admin' && (
                   <Link
@@ -171,18 +183,32 @@ export function Header() {
             ) : (
               <>
                 <Link
-                  href="/#program"
+                  href="/#about"
                   onClick={() => setMobileOpen(false)}
                   className="rounded px-3 py-2.5 text-sm font-medium text-foreground/70 transition-colors hover:bg-foreground/5"
                 >
-                  Программа
+                  Обо мне
                 </Link>
                 <Link
-                  href="/subscribe"
+                  href="/#for-whom"
                   onClick={() => setMobileOpen(false)}
                   className="rounded px-3 py-2.5 text-sm font-medium text-foreground/70 transition-colors hover:bg-foreground/5"
                 >
-                  Подписка
+                  Для кого
+                </Link>
+                <Link
+                  href="/#inside"
+                  onClick={() => setMobileOpen(false)}
+                  className="rounded px-3 py-2.5 text-sm font-medium text-foreground/70 transition-colors hover:bg-foreground/5"
+                >
+                  Что внутри
+                </Link>
+                <Link
+                  href="/#tariffs"
+                  onClick={() => setMobileOpen(false)}
+                  className="rounded px-3 py-2.5 text-sm font-medium text-foreground/70 transition-colors hover:bg-foreground/5"
+                >
+                  Тарифы
                 </Link>
                 <div className="my-1 h-px bg-foreground/5" />
                 <Link
@@ -193,11 +219,11 @@ export function Header() {
                   Войти
                 </Link>
                 <Link
-                  href="/auth/register"
+                  href="/dashboard"
                   onClick={() => setMobileOpen(false)}
                   className="rounded bg-accent px-3 py-2.5 text-center text-sm font-medium text-white transition-colors hover:bg-accent/85"
                 >
-                  Начать обучение
+                  Личный кабинет
                 </Link>
               </>
             )}
