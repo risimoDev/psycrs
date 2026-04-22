@@ -76,9 +76,10 @@ export function PdfViewer({ url, title }: PdfViewerProps) {
         // Dynamic import keeps the ~800 kB pdf.js out of the initial bundle
         const pdfjsLib = await import('pdfjs-dist');
 
-        // Use Cloudflare CDN worker matching the installed package version
+        // pdfjs-dist v4.x ships ESM workers (.mjs). Use jsDelivr which mirrors
+        // every npm release — this is more reliable than cdnjs for new patch versions.
         pdfjsLib.GlobalWorkerOptions.workerSrc =
-          `https://cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjsLib.version}/pdf.worker.min.js`;
+          `https://cdn.jsdelivr.net/npm/pdfjs-dist@${pdfjsLib.version}/build/pdf.worker.min.mjs`;
 
         // Fetch entire PDF as ArrayBuffer — single request, no streaming
         const res = await fetch(url);

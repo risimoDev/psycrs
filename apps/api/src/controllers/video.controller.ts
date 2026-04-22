@@ -1,3 +1,5 @@
+import { createReadStream } from 'node:fs';
+import { join, normalize } from 'node:path';
 import type { FastifyRequest, FastifyReply } from 'fastify';
 import { z } from 'zod';
 import { videoService } from '../services/video.service.js';
@@ -60,15 +62,27 @@ export class VideoController {
         .send(content);
     }
 
-    // Segments (.ts) and encryption keys (.key) — serve efficiently via Nginx X-Accel-Redirect
-    const { internalPath } = await videoService.validateAndGetPath(token, file, clientIp, userAgent);
+    // Segments (.ts) and encryption keys (.key) — stream directly from disk.
+    // We avoid Nginx X-Accel-Redirect here because the Nginx worker user (www-data)
+    // may not have read permissions on the storage volume owned by the API process user.
+    const { videoId } = await videoService.validateAndGetPath(token, file, clientIp, userAgent);
+
+    const env = getEnv();
+    const storageBase = normalize(join(env.VIDEO_STORAGE_PATH, videoId));
+    const segmentPath = normalize(join(storageBase, file));
+
+    // Guard against path-traversal (e.g. file = '../../etc/passwd')
+    if (!segmentPath.startsWith(storageBase + '/') && segmentPath !== storageBase) {
+      throw new ValidationError('Invalid file path');
+    }
+
+    const contentType = file.endsWith('.ts') ? 'video/MP2T' : 'application/octet-stream';
 
     return reply
-      .header('X-Accel-Redirect', internalPath)
-      .header('Content-Type', file.endsWith('.ts') ? 'video/MP2T' : 'application/octet-stream')
-      .header('Cache-Control', 'no-store')
-      .status(200)
-      .send();
+      .header('Content-Type', contentType)
+      .header('Cache-Control', 'public, max-age=3600')
+      .header('Access-Control-Allow-Origin', '*')
+      .send(createReadStream(segmentPath));
   }
 
   /** Widevine license proxy — forwards license requests to the configured DRM server. */
