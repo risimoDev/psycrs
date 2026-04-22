@@ -281,6 +281,9 @@ SUBSCRIPTION_PRICE=2990
 # ─── Frontend (baked into JS bundle at build time) ────────
 NEXT_PUBLIC_API_URL=https://${DOMAIN}/api
 NEXT_PUBLIC_SITE_URL=https://${DOMAIN}
+
+# ─── API public URL (for HLS playlist URL rewriting) ─────
+PUBLIC_API_URL=https://${DOMAIN}/api
 EOF
 
   # Save DB password separately for setup_database to read

@@ -1,4 +1,6 @@
 import { randomBytes, createHmac, createHash, createCipheriv, createDecipheriv } from 'node:crypto';
+import { readFile } from 'node:fs/promises';
+import { join } from 'node:path';
 import { prisma } from '../lib/prisma.js';
 import { getEnv } from '../config/env.js';
 import { getLogger } from '../lib/logger.js';
@@ -310,6 +312,66 @@ export class VideoService {
     });
 
     return { internalPath, userId: data.userId, videoId: data.videoId };
+  }
+
+  /**
+   * Read an HLS playlist (.m3u8) from disk, rewrite all relative URIs so they
+   * point back to /video/play?token=<token>&file=<path>.
+   *
+   * HLS.js resolves relative URLs based on the base URL of the containing playlist.
+   * Since the API uses query params (?file=...) the browser can't derive the correct
+   * base path automatically, so we must rewrite every URI explicitly.
+   */
+  async servePlaylist(
+    token: string,
+    file: string,
+    playBaseUrl: string, // e.g. "https://example.com/api/video/play"
+    clientIp?: string,
+    userAgent?: string,
+  ): Promise<string> {
+    const { videoId } = await this.validateAndGetPath(token, file, clientIp, userAgent);
+
+    const env = getEnv();
+    const filePath = join(env.VIDEO_STORAGE_PATH, videoId, file);
+    const content = await readFile(filePath, 'utf-8');
+
+    // Base directory for relative paths inside this playlist
+    // e.g. file="360p/index.m3u8" → dir="360p/"
+    const slashIdx = file.lastIndexOf('/');
+    const dir = slashIdx !== -1 ? file.slice(0, slashIdx + 1) : '';
+
+    const encodedToken = encodeURIComponent(token);
+
+    const rewritten = content
+      .split('\n')
+      .map((line) => {
+        const trimmed = line.trim();
+        if (trimmed === '') return line;
+
+        // Rewrite URI="..." in EXT-X-KEY tag (AES-128 encryption key)
+        if (trimmed.startsWith('#EXT-X-KEY')) {
+          return trimmed.replace(/URI="([^"]+)"/, (_match, uri: string) => {
+            if (uri.startsWith('http') || uri.startsWith('/')) return `URI="${uri}"`;
+            const fullFile = encodeURIComponent(dir + uri);
+            return `URI="${playBaseUrl}?token=${encodedToken}&file=${fullFile}"`;
+          });
+        }
+
+        // Leave all other tags untouched
+        if (trimmed.startsWith('#')) return line;
+
+        // Rewrite relative segment/playlist paths
+        if (!trimmed.startsWith('http') && !trimmed.startsWith('/')) {
+          const fullFile = encodeURIComponent(dir + trimmed);
+          return `${playBaseUrl}?token=${encodedToken}&file=${fullFile}`;
+        }
+
+        return line;
+      })
+      .join('\n');
+
+    this.logger.debug({ videoId, file }, 'Playlist rewritten');
+    return rewritten;
   }
 
   /** Get all lessons (for course page) */

@@ -131,7 +131,7 @@ export class AdminArticleService {
   }
 
   /** Serve a PDF file after validating the token */
-  async serveArticle(rawToken: string): Promise<{ stream: Readable; filename: string }> {
+  async serveArticle(rawToken: string): Promise<{ stream: Readable; filename: string; size: number }> {
     const tokenHash = createHash('sha256').update(rawToken).digest('hex');
 
     const record = await prisma.articleToken.findFirst({
@@ -145,16 +145,14 @@ export class AdminArticleService {
 
     if (!record) throw new NotFoundError('Token');
 
-    // Revoke after first use for extra security
-    await prisma.articleToken.update({
-      where: { id: record.id },
-      data: { revokedAt: new Date() },
-    });
+    // Token is NOT revoked on read — PDF.js needs to fetch the full binary and
+    // the token is already user-bound + short-lived (30 min TTL).
 
     const filePath = join(this.storagePath(), `${record.articleId}.pdf`);
     return {
       stream: createReadStream(filePath),
       filename: record.article.originalName,
+      size: record.article.size ? Number(record.article.size) : 0,
     };
   }
 }

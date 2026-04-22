@@ -45,6 +45,11 @@ const envSchema = z.object({
   SMTP_PASS: z.string().optional(),
   SMTP_FROM: z.string().default('noreply@psyhocourse.ru'),
 
+  // ─── Public URL (used for m3u8 URL rewriting) ─────
+  // Same value as NEXT_PUBLIC_API_URL in the web app.
+  // Example: https://example.com/api
+  PUBLIC_API_URL: z.string().default(''),
+
   // ─── FFmpeg / Shaka ───────────────────────────────
   SHAKA_PACKAGER_PATH: z.string().default('packager'),
 });

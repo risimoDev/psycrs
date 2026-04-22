@@ -1,11 +1,11 @@
 'use client';
 
-import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { contentApi, videoApi, API_BASE, type ContentItem } from '../../../../lib/api';
 import { VideoPlayer } from '../../../../components/video-player';
+import { PdfViewer } from '../../../../components/pdf-viewer';
 import { CheckIcon } from '../../../../components/icons';
 
 // ─── Helpers ──────────────────────────────────────────────
@@ -123,28 +123,19 @@ function VideoContent({ item }: { item: ContentItem }) {
 // ─── PDF content (protected) ──────────────────────────────
 
 function PdfContent({ item }: { item: ContentItem }) {
-  // Hooks must always be called before any conditional return (Rules of Hooks)
-  const [isFullscreen, setIsFullscreen] = useState(false);
-
   const hasArticle = !!(item.articleId || item.pdfUrl);
 
-  const {
-    data: tokenData,
-    isLoading,
-    isError,
-    refetch,
-  } = useQuery({
+  const { data: tokenData, isLoading, isError, refetch } = useQuery({
     queryKey: ['article-token', item.id],
     queryFn: () => contentApi.requestArticleToken(item.id),
-    // Token is single-use: revoked immediately after the iframe loads the PDF.
-    // Never cache — request a fresh token on every component mount.
-    staleTime: 0,
-    gcTime: 0,
+    // Token is NOT single-use anymore — allow reuse for the 30-min TTL window.
+    // Cache for 25 min so we get a fresh token before it expires.
+    staleTime: 25 * 60 * 1000,
+    gcTime: 30 * 60 * 1000,
     enabled: hasArticle,
     retry: 1,
   });
 
-  // Проверка: есть ли у урока прикреплённая статья
   if (!hasArticle) {
     return (
       <div className="rounded-2xl border border-foreground/10 bg-foreground/[0.02] p-8 text-center">
@@ -157,87 +148,29 @@ function PdfContent({ item }: { item: ContentItem }) {
     );
   }
 
-  const pdfUrl = tokenData?.token
-    ? `${API_BASE}/articles/read?token=${encodeURIComponent(tokenData.token)}`
-    : null;
-
   if (isLoading) {
     return (
-      <div className="w-full rounded-2xl bg-foreground/5 flex items-center justify-center" style={{ height: '520px' }}>
-        <div className="flex flex-col items-center gap-3 text-foreground/30">
-          <div className="w-8 h-8 border-2 border-accent/30 border-t-accent rounded-full animate-spin" />
-          <p className="text-sm font-body">Загрузка статьи...</p>
-        </div>
+      <div className="flex flex-col items-center justify-center gap-4 rounded-2xl bg-foreground/[0.03] border border-foreground/10 py-20">
+        <div className="w-8 h-8 border-2 border-accent/30 border-t-accent rounded-full animate-spin" />
+        <p className="text-sm font-body text-foreground/40">Загрузка статьи…</p>
       </div>
     );
   }
 
-  if (isError || !pdfUrl) {
+  if (isError || !tokenData?.token) {
     return (
-      <div className="w-full rounded-2xl bg-foreground/5 flex flex-col items-center justify-center gap-4 p-8" style={{ height: '360px' }}>
-        <svg className="h-12 w-12 text-foreground/20" fill="none" stroke="currentColor" strokeWidth="1.5" viewBox="0 0 24 24">
-          <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v3.75m9-.75a9 9 0 1 1-18 0 9 9 0 0 1 18 0Zm-9 3.75h.008v.008H12v-.008Z" />
-        </svg>
-        <p className="text-foreground/40 font-body text-sm text-center">Не удалось загрузить статью</p>
-        <button
-          onClick={() => refetch()}
-          className="text-sm text-accent hover:underline font-body"
-        >
+      <div className="flex flex-col items-center justify-center gap-4 rounded-2xl bg-foreground/[0.03] border border-foreground/10 py-16 px-8 text-center">
+        <p className="text-sm font-body text-foreground/40">Не удалось загрузить статью</p>
+        <button onClick={() => refetch()} className="text-sm text-accent hover:underline font-body">
           Попробовать снова
         </button>
       </div>
     );
   }
 
-  return (
-    <div className={`relative flex flex-col ${isFullscreen ? 'fixed inset-0 z-50 bg-background p-0' : ''}`}>
-      {/* Toolbar */}
-      <div className={`flex items-center justify-between ${isFullscreen ? 'px-4 py-3 border-b border-foreground/10' : 'mb-3'}`}>
-        {isFullscreen && (
-          <span className="text-sm font-medium font-body text-foreground/80 truncate max-w-xs">{item.title}</span>
-        )}
-        <div className={`flex items-center gap-2 ${isFullscreen ? '' : 'ml-auto'}`}>
-          <button
-            onClick={() => setIsFullscreen((f) => !f)}
-            className="inline-flex items-center gap-1.5 rounded-lg border border-foreground/10 bg-foreground/[0.03] px-3 py-1.5 text-xs font-medium font-body text-foreground/60 hover:bg-foreground/[0.07] hover:text-foreground transition-all"
-            title={isFullscreen ? 'Свернуть' : 'На весь экран'}
-          >
-            {isFullscreen ? (
-              <>
-                <svg className="h-3.5 w-3.5" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M9 9V4.5M9 9H4.5M9 9 3.75 3.75M9 15v4.5M9 15H4.5M9 15l-5.25 5.25M15 9h4.5M15 9V4.5M15 9l5.25-5.25M15 15h4.5M15 15v4.5m0-4.5 5.25 5.25" />
-                </svg>
-                Свернуть
-              </>
-            ) : (
-              <>
-                <svg className="h-3.5 w-3.5" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M3.75 3.75v4.5m0-4.5h4.5m-4.5 0L9 9M3.75 20.25v-4.5m0 4.5h4.5m-4.5 0L9 15M20.25 3.75h-4.5m4.5 0v4.5m0-4.5L15 9m5.25 11.25h-4.5m4.5 0v-4.5m0 4.5L15 15" />
-                </svg>
-                На весь экран
-              </>
-            )}
-          </button>
-        </div>
-      </div>
+  const pdfUrl = `${API_BASE}/articles/read?token=${encodeURIComponent(tokenData.token)}`;
 
-      {/* PDF iframe — sandbox blocks right-click save/print */}
-      <div className={`rounded-2xl overflow-hidden border border-foreground/10 bg-black ${isFullscreen ? 'flex-1 rounded-none border-0' : ''}`}>
-        <iframe
-          src={pdfUrl}
-          className="w-full"
-          style={{
-            height: isFullscreen ? '100%' : 'min(75vh, 800px)',
-            border: 'none',
-            display: 'block',
-          }}
-          title={item.title}
-          sandbox="allow-scripts allow-same-origin"
-          loading="lazy"
-        />
-      </div>
-    </div>
-  );
+  return <PdfViewer url={pdfUrl} title={item.title} />;
 }
 
 // ─── Page ─────────────────────────────────────────────────

@@ -40,12 +40,32 @@ export class VideoController {
     const clientIp = request.ip ?? (request.headers['x-forwarded-for'] as string)?.split(',')[0]?.trim();
     const userAgent = request.headers['user-agent'];
 
+    // ── HLS playlists must be rewritten so every relative URI points back to
+    // this endpoint with the token param, instead of being resolved relative to
+    // the browser's view of the URL (which loses the ?file= routing).
+    if (file.endsWith('.m3u8')) {
+      const env = getEnv();
+      // Build the public URL for this endpoint that HLS.js will use as base
+      const publicApiUrl = env.PUBLIC_API_URL.replace(/\/$/, '');
+      const playBaseUrl = publicApiUrl
+        ? `${publicApiUrl}/video/play`
+        : `${request.headers['x-forwarded-proto'] ?? 'https'}://${request.headers.host}/api/video/play`;
+
+      const content = await videoService.servePlaylist(token, file, playBaseUrl, clientIp, userAgent);
+
+      return reply
+        .header('Content-Type', 'application/vnd.apple.mpegurl')
+        .header('Cache-Control', 'no-store')
+        .header('Access-Control-Allow-Origin', '*')
+        .send(content);
+    }
+
+    // Segments (.ts) and encryption keys (.key) — serve efficiently via Nginx X-Accel-Redirect
     const { internalPath } = await videoService.validateAndGetPath(token, file, clientIp, userAgent);
 
-    // Nginx X-Accel-Redirect — the header redirects internally to Nginx
     return reply
       .header('X-Accel-Redirect', internalPath)
-      .header('Content-Type', file.endsWith('.m3u8') ? 'application/x-mpegURL' : 'video/MP2T')
+      .header('Content-Type', file.endsWith('.ts') ? 'video/MP2T' : 'application/octet-stream')
       .header('Cache-Control', 'no-store')
       .status(200)
       .send();

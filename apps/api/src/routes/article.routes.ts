@@ -57,15 +57,17 @@ export async function articleRoutes(app: FastifyInstance) {
 
     if (!query.success) throw new ValidationError('Invalid token');
 
-    const { stream, filename } = await adminArticleService.serveArticle(query.data.token);
+    const { stream, filename, size } = await adminArticleService.serveArticle(query.data.token);
 
-    // Block download: Content-Disposition inline, no Content-Security-Policy issues
-    return reply
+    const reply2 = reply
       .header('Content-Type', 'application/pdf')
       .header('Content-Disposition', `inline; filename="${encodeURIComponent(filename)}"`)
       .header('X-Content-Type-Options', 'nosniff')
       .header('Cache-Control', 'no-store')
-      .header('X-Frame-Options', 'SAMEORIGIN')
-      .send(stream);
+      .header('X-Frame-Options', 'SAMEORIGIN');
+
+    if (size > 0) reply2.header('Content-Length', String(size));
+
+    return reply2.send(stream);
   });
 }

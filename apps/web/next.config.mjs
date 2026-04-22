@@ -7,6 +7,12 @@ const nextConfig = {
   eslint: {
     ignoreDuringBuilds: true,
   },
+  webpack: (config) => {
+    // pdf.js optionally depends on canvas for server-side rendering; disable it
+    // in the browser bundle to avoid "Module not found: Can't resolve 'canvas'" errors.
+    config.resolve.alias['canvas'] = false;
+    return config;
+  },
   headers: async () => [
     {
       source: '/(.*)',
