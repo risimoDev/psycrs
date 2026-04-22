@@ -30,6 +30,7 @@ const createLessonSchema = z.object({
   isPublished: z.boolean().optional(),
   contentType: z.enum(['lecture', 'affirmation', 'article_pdf']).optional(),
   pdfUrl: z.string().url().optional(),
+  thumbnailUrl: z.string().optional(),
 });
 
 const updateLessonSchema = z.object({
@@ -44,6 +45,7 @@ const updateLessonSchema = z.object({
   isPublished: z.boolean().optional(),
   contentType: z.enum(['lecture', 'affirmation', 'article_pdf']).optional(),
   pdfUrl: z.string().url().nullable().optional(),
+  thumbnailUrl: z.string().nullable().optional(),
 });
 
 const idParamSchema = z.object({
@@ -142,6 +144,14 @@ export class AdminController {
     const { id } = idParamSchema.parse(request.params);
     await adminLessonService.delete(id, request.userId);
     return reply.status(204).send();
+  }
+
+  async uploadLessonThumbnail(request: FastifyRequest, reply: FastifyReply) {
+    const { id } = idParamSchema.parse(request.params);
+    const file = await request.file();
+    if (!file) throw new ValidationError('No file uploaded');
+    const lesson = await adminLessonService.uploadThumbnail(id, file.file, file.filename, request.userId);
+    return reply.send(lesson);
   }
 
   // ── Users ───────────────────────────────────────────

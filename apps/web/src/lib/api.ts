@@ -206,6 +206,7 @@ export interface ContentItem {
   articleId: string | null;
   duration: number | null;
   videoId: string | null;
+  thumbnailUrl: string | null;
   isMarkedViewed: boolean;
 }
 
@@ -359,6 +360,7 @@ export interface AdminLesson {
   isPublished: boolean;
   contentType: ContentType;
   pdfUrl: string | null;
+  thumbnailUrl: string | null;
   createdAt: string;
   updatedAt: string;
 }
@@ -495,6 +497,26 @@ export const adminApi = {
     request<AdminLesson>(`/admin/lessons/${id}`, { method: 'PATCH', body: data }),
   deleteLesson: (id: string) =>
     request<void>(`/admin/lessons/${id}`, { method: 'DELETE' }),
+
+  uploadLessonThumbnail: async (lessonId: string, file: File): Promise<AdminLesson> => {
+    const formData = new FormData();
+    formData.append('file', file);
+
+    const headers: Record<string, string> = {};
+    if (accessToken) headers['Authorization'] = `Bearer ${accessToken}`;
+
+    const res = await fetch(`${API_BASE}/admin/lessons/${lessonId}/thumbnail`, {
+      method: 'POST',
+      headers,
+      body: formData,
+    });
+
+    if (!res.ok) {
+      const data = await res.json().catch(() => ({}));
+      throw new ApiError(res.status, (data as { message?: string }).message ?? 'Thumbnail upload failed');
+    }
+    return res.json();
+  },
 
   // Videos
   videos: (page = 1, limit = 20, status?: string) =>

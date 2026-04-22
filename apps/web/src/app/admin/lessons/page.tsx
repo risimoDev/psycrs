@@ -1,9 +1,10 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useRef, useEffect, type ChangeEvent } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { adminApi, type AdminLesson, type AdminVideo, type AdminArticle, type ContentType } from '../../../lib/api';
+import { adminApi, API_BASE, type AdminLesson, type AdminVideo, type AdminArticle, type ContentType } from '../../../lib/api';
 import { Button } from '../../../components/button';
+import { LessonPlaceholder } from '../../../components/lesson-placeholder';
 
 const CONTENT_TYPES: { value: ContentType; label: string }[] = [
   { value: 'lecture', label: 'Видео лекция' },
@@ -39,6 +40,7 @@ interface LessonFormData {
   order: number;
   duration: number | '';
   isPublished: boolean;
+  thumbnailFile: File | null;
 }
 
 function LessonForm({
@@ -64,6 +66,22 @@ function LessonForm({
   const [order, setOrder] = useState(initial?.order ?? 0);
   const [duration, setDuration] = useState<number | ''>(initial?.duration ?? '');
   const [isPublished, setIsPublished] = useState(initial?.isPublished ?? false);
+  const [thumbnailFile, setThumbnailFile] = useState<File | null>(null);
+  const [thumbnailPreview, setThumbnailPreview] = useState<string | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  // Clean up object URL on unmount or when new file is chosen
+  useEffect(() => {
+    return () => { if (thumbnailPreview && thumbnailPreview.startsWith('blob:')) URL.revokeObjectURL(thumbnailPreview); };
+  }, [thumbnailPreview]);
+
+  function handleThumbnailChange(e: ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0] ?? null;
+    if (!file) return;
+    if (thumbnailPreview && thumbnailPreview.startsWith('blob:')) URL.revokeObjectURL(thumbnailPreview);
+    setThumbnailFile(file);
+    setThumbnailPreview(URL.createObjectURL(file));
+  }
 
   const { data: videosData } = useQuery({
     queryKey: ['admin', 'videos', 'ready'],
@@ -98,7 +116,7 @@ function LessonForm({
     <form
       onSubmit={(e) => {
         e.preventDefault();
-        onSubmit({ title, slug, description, contentType, videoId, articleId, pdfUrl, order, duration, isPublished });
+        onSubmit({ title, slug, description, contentType, videoId, articleId, pdfUrl, order, duration, isPublished, thumbnailFile });
       }}
       className="space-y-4 bg-surface border border-foreground/10 rounded-lg p-5"
     >
@@ -149,7 +167,7 @@ function LessonForm({
         </div>
 
         <div>
-          <label className="block text-xs font-body text-muted mb-1">Slug *</label>
+          <label className="block text-xs font-body text-muted mb-1">Адрес страницы (slug) *</label>
           <input
             required
             pattern="[a-z0-9-]+"
@@ -260,6 +278,57 @@ function LessonForm({
             <span className="text-sm font-body text-foreground">Опубликован</span>
           </label>
         </div>
+
+        {/* Превью */}
+        <div className="col-span-2">
+          <label className="block text-xs font-body text-muted mb-2">Превью</label>
+          <div className="flex items-start gap-3">
+            {/* Preview image or placeholder */}
+            <div className="relative flex-shrink-0 h-20 w-20 rounded-lg overflow-hidden border border-foreground/10 bg-foreground/5">
+              {thumbnailPreview ? (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img src={thumbnailPreview} alt="" className="h-full w-full object-cover" />
+              ) : initial?.thumbnailUrl ? (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img src={`${API_BASE}${initial.thumbnailUrl}`} alt="" className="h-full w-full object-cover" />
+              ) : initial ? (
+                <LessonPlaceholder id={initial.id} className="h-full w-full" />
+              ) : (
+                <div className="h-full w-full flex items-center justify-center">
+                  <svg className="w-6 h-6 text-foreground/20" fill="none" stroke="currentColor" strokeWidth="1.5" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M2.25 15.75l5.159-5.159a2.25 2.25 0 013.182 0l5.159 5.159m-1.5-1.5l1.409-1.409a2.25 2.25 0 013.182 0l2.909 2.909M3 20.25h18A.75.75 0 0021.75 19.5V4.5A.75.75 0 0021 3.75H3A.75.75 0 002.25 4.5v15A.75.75 0 003 20.25z" />
+                  </svg>
+                </div>
+              )}
+            </div>
+            <div className="flex flex-col gap-1.5">
+              <button
+                type="button"
+                onClick={() => fileInputRef.current?.click()}
+                className="px-3 py-1.5 rounded border border-foreground/15 text-xs font-body text-foreground/70 hover:border-accent/40 hover:text-foreground transition-colors"
+              >
+                {thumbnailFile ? thumbnailFile.name : 'Выбрать изображение'}
+              </button>
+              {(thumbnailFile || initial?.thumbnailUrl) && (
+                <button
+                  type="button"
+                  onClick={() => { setThumbnailFile(null); setThumbnailPreview(null); if (fileInputRef.current) fileInputRef.current.value = ''; }}
+                  className="text-[11px] text-red-400/70 hover:text-red-400 font-body text-left"
+                >
+                  Удалить превью
+                </button>
+              )}
+              <p className="text-[10px] text-muted">JPG, PNG, WebP. Рекомендуется 1:1 или 16:9</p>
+            </div>
+          </div>
+          <input
+            ref={fileInputRef}
+            type="file"
+            accept="image/jpeg,image/png,image/webp,image/avif"
+            className="hidden"
+            onChange={handleThumbnailChange}
+          />
+        </div>
       </div>
 
       <div className="flex gap-3 pt-2">
@@ -294,8 +363,8 @@ export default function LessonsPage() {
   });
 
   const createMut = useMutation({
-    mutationFn: (d: LessonFormData) =>
-      adminApi.createLesson({
+    mutationFn: async (d: LessonFormData) => {
+      const lesson = await adminApi.createLesson({
         title: d.title,
         slug: d.slug,
         description: d.description || undefined,
@@ -306,7 +375,12 @@ export default function LessonsPage() {
         order: d.order,
         duration: d.duration !== '' ? Number(d.duration) : undefined,
         isPublished: d.isPublished,
-      }),
+      });
+      if (d.thumbnailFile) {
+        await adminApi.uploadLessonThumbnail(lesson.id, d.thumbnailFile);
+      }
+      return lesson;
+    },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['admin', 'lessons'] });
       setShowCreate(false);
@@ -316,8 +390,8 @@ export default function LessonsPage() {
   });
 
   const updateMut = useMutation({
-    mutationFn: ({ id, ...d }: { id: string } & LessonFormData) =>
-      adminApi.updateLesson(id, {
+    mutationFn: async ({ id, ...d }: { id: string } & LessonFormData) => {
+      const lesson = await adminApi.updateLesson(id, {
         title: d.title,
         slug: d.slug,
         description: d.description || undefined,
@@ -328,7 +402,12 @@ export default function LessonsPage() {
         order: d.order,
         duration: d.duration !== '' ? Number(d.duration) : undefined,
         isPublished: d.isPublished,
-      }),
+      });
+      if (d.thumbnailFile) {
+        await adminApi.uploadLessonThumbnail(id, d.thumbnailFile);
+      }
+      return lesson;
+    },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['admin', 'lessons'] });
       setEditingId(null);

@@ -16,6 +16,7 @@ export async function adminRoutes(app: FastifyInstance) {
   app.post('/lessons', (req, reply) => adminController.createLesson(req, reply));
   app.patch('/lessons/:id', (req, reply) => adminController.updateLesson(req, reply));
   app.delete('/lessons/:id', (req, reply) => adminController.deleteLesson(req, reply));
+  app.post('/lessons/:id/thumbnail', (req, reply) => adminController.uploadLessonThumbnail(req, reply));
 
   // ── Videos ────────────────────────────────────────
   app.get('/videos', (req, reply) => adminController.listVideos(req, reply));

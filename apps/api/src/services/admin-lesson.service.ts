@@ -3,6 +3,13 @@ import { getLogger } from '../lib/logger.js';
 import { NotFoundError, ConflictError } from '../lib/errors.js';
 import { auditService } from './audit.service.js';
 import { type ContentType } from '@prisma/client';
+import * as fs from 'node:fs';
+import * as path from 'node:path';
+import { randomUUID } from 'node:crypto';
+import type { Readable } from 'node:stream';
+import { pipeline } from 'node:stream/promises';
+
+const THUMBNAIL_DIR = path.resolve(process.cwd(), 'storage', 'thumbnails');
 
 interface CreateLessonInput {
   title: string;
@@ -16,6 +23,7 @@ interface CreateLessonInput {
   isPublished?: boolean;
   contentType?: ContentType;
   pdfUrl?: string;
+  thumbnailUrl?: string;
 }
 
 interface UpdateLessonInput {
@@ -30,6 +38,7 @@ interface UpdateLessonInput {
   isPublished?: boolean;
   contentType?: ContentType;
   pdfUrl?: string | null;
+  thumbnailUrl?: string | null;
 }
 
 interface LessonListQuery {
@@ -39,6 +48,12 @@ interface LessonListQuery {
 
 export class AdminLessonService {
   private readonly logger = getLogger().child({ service: 'admin-lesson' });
+
+  constructor() {
+    if (!fs.existsSync(THUMBNAIL_DIR)) {
+      fs.mkdirSync(THUMBNAIL_DIR, { recursive: true });
+    }
+  }
 
   async list(query: LessonListQuery) {
     const skip = (query.page - 1) * query.limit;
@@ -78,6 +93,7 @@ export class AdminLessonService {
         isPublished: input.isPublished ?? false,
         contentType: input.contentType ?? 'lecture',
         pdfUrl: input.pdfUrl ?? null,
+        thumbnailUrl: input.thumbnailUrl ?? null,
       },
     });
 
@@ -116,6 +132,7 @@ export class AdminLessonService {
         ...(input.isPublished !== undefined && { isPublished: input.isPublished }),
         ...(input.contentType !== undefined && { contentType: input.contentType }),
         ...(input.pdfUrl !== undefined && { pdfUrl: input.pdfUrl }),
+        ...(input.thumbnailUrl !== undefined && { thumbnailUrl: input.thumbnailUrl }),
       },
     });
 
@@ -135,6 +152,13 @@ export class AdminLessonService {
     const lesson = await prisma.lesson.findUnique({ where: { id } });
     if (!lesson) throw new NotFoundError('Lesson');
 
+    // Remove old thumbnail if exists
+    if (lesson.thumbnailUrl) {
+      const oldFilename = lesson.thumbnailUrl.replace(/^\/thumbnails\//, '');
+      const oldPath = path.join(THUMBNAIL_DIR, oldFilename);
+      if (fs.existsSync(oldPath)) fs.unlinkSync(oldPath);
+    }
+
     await prisma.lesson.delete({ where: { id } });
 
     await auditService.log({
@@ -146,6 +170,45 @@ export class AdminLessonService {
     });
 
     this.logger.info({ lessonId: id, adminId }, 'Lesson deleted');
+  }
+
+  async uploadThumbnail(id: string, fileStream: Readable, filename: string, adminId: string) {
+    const lesson = await prisma.lesson.findUnique({ where: { id } });
+    if (!lesson) throw new NotFoundError('Lesson');
+
+    // Remove old thumbnail
+    if (lesson.thumbnailUrl) {
+      const oldFilename = lesson.thumbnailUrl.replace(/^\/thumbnails\//, '');
+      const oldPath = path.join(THUMBNAIL_DIR, oldFilename);
+      if (fs.existsSync(oldPath)) fs.unlinkSync(oldPath);
+    }
+
+    const allowedExts = new Set(['.jpg', '.jpeg', '.png', '.webp', '.avif']);
+    const ext = path.extname(filename).toLowerCase() || '.jpg';
+    if (!allowedExts.has(ext)) {
+      throw new Error('Only image files are allowed for thumbnails');
+    }
+    const newFilename = `${randomUUID()}${ext}`;
+    const filePath = path.join(THUMBNAIL_DIR, newFilename);
+
+    await pipeline(fileStream, fs.createWriteStream(filePath));
+
+    const thumbnailUrl = `/thumbnails/${newFilename}`;
+    const updated = await prisma.lesson.update({
+      where: { id },
+      data: { thumbnailUrl },
+    });
+
+    await auditService.log({
+      adminId,
+      action: 'upload_thumbnail',
+      entity: 'lesson',
+      entityId: id,
+      details: { thumbnailUrl },
+    });
+
+    this.logger.info({ lessonId: id, thumbnailUrl }, 'Lesson thumbnail uploaded');
+    return updated;
   }
 }
 

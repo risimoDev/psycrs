@@ -15,6 +15,7 @@ export interface ContentItem {
   duration: number | null;
   isMarkedViewed: boolean;
   videoId: string | null;
+  thumbnailUrl: string | null;
 }
 
 export class ContentService {
@@ -41,6 +42,7 @@ export class ContentService {
         articleId: true,
         duration: true,
         videoId: true,
+        thumbnailUrl: true,
       },
     });
 
@@ -85,6 +87,7 @@ export class ContentService {
         articleId: true,
         duration: true,
         videoId: true,
+        thumbnailUrl: true,
       },
     });
 

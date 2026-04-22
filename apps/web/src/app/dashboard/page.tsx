@@ -4,9 +4,10 @@ import { useState } from 'react';
 import type React from 'react';
 import Link from 'next/link';
 import { useQuery, useMutation } from '@tanstack/react-query';
-import { subscriptionApi, contentApi, paymentApi, type ContentItem, type ContentType } from '../../lib/api';
+import { subscriptionApi, contentApi, paymentApi, type ContentItem, type ContentType, API_BASE } from '../../lib/api';
 import { Button } from '../../components/button';
 import { CheckIcon } from '../../components/icons';
+import { LessonPlaceholder } from '../../components/lesson-placeholder';
 
 // ─── Types & constants ────────────────────────────────────
 
@@ -82,42 +83,52 @@ function CardSkeleton() {
 function ContentCard({ item }: { item: ContentItem }) {
   const isPdf = item.contentType === 'article_pdf';
   const duration = getDurationLabel(item.duration);
+  const thumbnailSrc = item.thumbnailUrl ? `${API_BASE}${item.thumbnailUrl}` : null;
 
   return (
     <Link
       href={`/dashboard/content/${item.id}`}
-      className="group relative flex aspect-square flex-col justify-end overflow-hidden rounded-2xl bg-surface border border-foreground/[0.07] p-4 transition-all duration-300 hover:border-accent/30 hover:shadow-lg hover:shadow-foreground/5 hover:-translate-y-0.5"
+      className="group relative flex aspect-square flex-col justify-end overflow-hidden rounded-2xl bg-surface border border-foreground/[0.07] transition-all duration-300 hover:border-accent/30 hover:shadow-lg hover:shadow-foreground/5 hover:-translate-y-0.5"
     >
-      {/* Background texture */}
-      <div
-        className="pointer-events-none absolute inset-0 grain opacity-60"
-        style={{
-          background: isPdf
-            ? 'radial-gradient(ellipse 80% 80% at 20% 80%, rgba(61,107,79,0.07) 0%, transparent 60%)'
-            : 'radial-gradient(ellipse 80% 80% at 80% 20%, rgba(166,124,82,0.07) 0%, transparent 60%)',
-        }}
-      />
+      {/* Thumbnail or SVG placeholder — fills the whole card */}
+      {thumbnailSrc ? (
+        // eslint-disable-next-line @next/next/no-img-element
+        <img
+          src={thumbnailSrc}
+          alt=""
+          aria-hidden="true"
+          className="absolute inset-0 h-full w-full object-cover transition-transform duration-500 group-hover:scale-[1.03]"
+        />
+      ) : (
+        <LessonPlaceholder
+          id={item.id}
+          className="absolute inset-0 h-full w-full"
+        />
+      )}
 
-      {/* Type icon */}
-      <span className="absolute top-4 left-4 text-foreground/30 select-none">
+      {/* Gradient overlay so text is always readable */}
+      <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent" />
+
+      {/* Type icon — top-left */}
+      <span className="absolute top-3 left-3 text-white/50 select-none drop-shadow-sm">
         {isPdf ? <ArticleIcon /> : item.contentType === 'affirmation' ? <AffirmationIcon /> : <LectureIcon />}
       </span>
 
-      {/* Viewed badge */}
+      {/* Viewed badge — top-right */}
       {item.isMarkedViewed && (
-        <span className="absolute top-4 right-4 flex h-6 w-6 items-center justify-center rounded-full bg-accent/15">
+        <span className="absolute top-3 right-3 flex h-6 w-6 items-center justify-center rounded-full bg-accent/20 backdrop-blur-sm">
           <CheckIcon size={13} className="text-accent" />
         </span>
       )}
 
-      {/* Info */}
-      <div className="relative z-10">
+      {/* Info — bottom */}
+      <div className="relative z-10 p-4">
         {duration && (
-          <p className="mb-1.5 text-[11px] font-medium tracking-wide text-foreground/40 font-body uppercase">
+          <p className="mb-1 text-[11px] font-medium tracking-wide text-white/50 font-body uppercase">
             {duration}
           </p>
         )}
-        <h3 className="text-[15px] font-semibold leading-snug text-foreground font-heading line-clamp-3 group-hover:text-accent transition-colors">
+        <h3 className="text-[15px] font-semibold leading-snug text-white font-heading line-clamp-3 group-hover:text-accent/90 transition-colors drop-shadow-sm">
           {item.title}
         </h3>
       </div>

@@ -7,6 +7,7 @@ import { contentApi, videoApi, API_BASE, type ContentItem } from '../../../../li
 import { VideoPlayer } from '../../../../components/video-player';
 import { PdfViewer } from '../../../../components/pdf-viewer';
 import { CheckIcon } from '../../../../components/icons';
+import { LessonPlaceholder } from '../../../../components/lesson-placeholder';
 
 // ─── Helpers ──────────────────────────────────────────────
 
@@ -109,11 +110,14 @@ function VideoContent({ item }: { item: ContentItem }) {
       }
     : undefined;
 
+  const posterUrl = item.thumbnailUrl ? `${API_BASE}${item.thumbnailUrl}` : undefined;
+
   return (
     <div className="overflow-hidden rounded-2xl bg-black">
       <VideoPlayer
         src={absoluteSrc}
         lessonId={item.id}
+        poster={posterUrl}
         drm={absoluteDrm}
       />
     </div>

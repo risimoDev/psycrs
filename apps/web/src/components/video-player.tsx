@@ -14,6 +14,7 @@ interface VideoPlayerProps {
   src: string;
   lessonId?: string;
   initialPosition?: number;
+  poster?: string;
   onProgress?: (progress: number, currentTime: number, duration: number) => void;
   drm?: DrmConfig;
 }
@@ -59,7 +60,7 @@ async function initShakaPlayer(
     seekedRef.current = true;
   }
 
-  video.play().catch(() => {});
+  // Do NOT autoplay — user must press play
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   (video as any).__shakaPlayer = player;
 }
@@ -83,7 +84,7 @@ function initHlsPlayer(
         video.currentTime = initialPosition;
         seekedRef.current = true;
       }
-      video.play().catch(() => {});
+      // Do NOT autoplay — user must press play
     });
 
     hls.on(Hls.Events.ERROR, (_event, data) => {
@@ -104,7 +105,7 @@ function initHlsPlayer(
         video.currentTime = initialPosition;
         seekedRef.current = true;
       }
-      video.play().catch(() => {});
+      // Do NOT autoplay — user must press play
     });
   }
 }
@@ -180,7 +181,7 @@ function PipSvg() {
 }
 
 /* ─── Основной компонент ─── */
-export function VideoPlayer({ src, initialPosition, onProgress, drm }: VideoPlayerProps) {
+export function VideoPlayer({ src, initialPosition, poster, onProgress, drm }: VideoPlayerProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const videoRef = useRef<HTMLVideoElement>(null);
   const hlsRef = useRef<Hls | null>(null);
@@ -397,6 +398,7 @@ export function VideoPlayer({ src, initialPosition, onProgress, drm }: VideoPlay
         className="w-full h-full cursor-pointer"
         playsInline
         controlsList="nodownload"
+        poster={poster}
         onClick={togglePlay}
         onDoubleClick={toggleFullscreen}
       />
