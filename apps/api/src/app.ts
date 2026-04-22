@@ -77,14 +77,12 @@ export async function buildApp(): Promise<FastifyInstance> {
   });
 
   // ─── Health check ─────────────────────────────────
-  app.get('/health', async () => ({ status: 'ok', ts: new Date().toISOString() }));
+  app.get('/health', async () => ({ status: 'ok', ts: new Date().toISOString(), v: '2' }));
 
-  // ─── Debug: list registered routes (admin only, remove in prod if desired) ──
-  app.get('/health/routes', async (req, reply) => {
-    const token = (req.headers.authorization ?? '').replace('Bearer ', '');
-    if (!token) return reply.status(401).send({ message: 'Unauthorized' });
+  // ─── Debug: list registered routes ────────────────────
+  app.get('/health/routes', async (_req, reply) => {
     const routes = app.printRoutes({ commonPrefix: false });
-    return reply.send({ routes });
+    return reply.type('text/plain').send(routes);
   });
 
   // ─── Routes ───────────────────────────────────────

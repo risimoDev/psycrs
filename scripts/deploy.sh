@@ -111,6 +111,10 @@ build_app() {
   log "Generating Prisma client..."
   cd apps/api
   npx prisma generate
+
+  # Чистим dist чтобы не было старых скомпилированных файлов
+  log "Cleaning API dist..."
+  rm -rf dist
   cd "$APP_DIR"
 
   npx turbo build --force || die "Build failed — aborting deploy. PM2 still running old version."
@@ -123,7 +127,15 @@ reload_pm2() {
   log "Reloading PM2 processes (zero-downtime)..."
   cd "$APP_DIR"
 
-  pm2 reload ecosystem.config.js
+  # Проверяем что скомпилированный dist содержит нужные роуты
+  if ! grep -q "articles/upload\|articles.upload\|uploadArticle" apps/api/dist/routes/admin.routes.js 2>/dev/null; then
+    err "CRITICAL: articles/upload route not found in compiled dist! Dumping dist/app.js imports..."
+    grep -n "require\|import\|register\|routes" apps/api/dist/app.js 2>/dev/null | head -40 || true
+    die "Compiled output is stale or incomplete. Run: rm -rf apps/api/dist && npx turbo build --force"
+  fi
+  log "Route verification passed: articles/upload found in dist"
+
+  pm2 reload ecosystem.config.js --update-env
   pm2 save
 
   log "PM2 reloaded"

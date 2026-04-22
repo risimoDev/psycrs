@@ -2,8 +2,8 @@ module.exports = {
   apps: [
     {
       name: 'api',
-      cwd: './apps/api',
-      script: 'dist/server.js',
+      cwd: '/var/www/psycrs/apps/api',
+      script: '/var/www/psycrs/apps/api/dist/server.js',
       instances: 1,
       exec_mode: 'fork',
       env_file: '/var/www/psycrs/.env',
@@ -21,8 +21,8 @@ module.exports = {
     },
     {
       name: 'web',
-      cwd: './apps/web',
-      script: 'node_modules/.bin/next',
+      cwd: '/var/www/psycrs/apps/web',
+      script: '/var/www/psycrs/apps/web/node_modules/.bin/next',
       args: 'start',
       instances: 1,
       exec_mode: 'fork',
