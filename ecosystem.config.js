@@ -22,7 +22,7 @@ module.exports = {
     {
       name: 'web',
       cwd: '/var/www/psycrs/apps/web',
-      script: '/var/www/psycrs/apps/web/node_modules/.bin/next',
+      script: '/var/www/psycrs/node_modules/.bin/next',
       args: 'start',
       instances: 1,
       exec_mode: 'fork',
