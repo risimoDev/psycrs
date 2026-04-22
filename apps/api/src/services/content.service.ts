@@ -10,6 +10,7 @@ export interface ContentItem {
   order: number;
   contentType: ContentType;
   pdfUrl: string | null;
+  articleId: string | null;
   duration: number | null;
   isMarkedViewed: boolean;
   videoId: string | null;
@@ -34,6 +35,7 @@ export class ContentService {
         order: true,
         contentType: true,
         pdfUrl: true,
+        articleId: true,
         duration: true,
         videoId: true,
       },
@@ -65,6 +67,8 @@ export class ContentService {
   async getById(userId: string, lessonId: string): Promise<ContentItem> {
     await this.requireActiveSubscription(userId);
 
+    this.logger.debug({ userId, lessonId }, 'Fetching content item');
+
     const lesson = await prisma.lesson.findUnique({
       where: { id: lessonId, isPublished: true },
       select: {
@@ -75,6 +79,7 @@ export class ContentService {
         order: true,
         contentType: true,
         pdfUrl: true,
+        articleId: true,
         duration: true,
         videoId: true,
       },
@@ -82,6 +87,8 @@ export class ContentService {
 
     if (!lesson) throw new NotFoundError('Content');
 
+    this.logger.warn({ userId, lessonId }, 'Content not found');
+    
     const progress = await prisma.progress.findUnique({
       where: { userId_lessonId: { userId, lessonId } },
       select: { isMarkedViewed: true },
@@ -115,16 +122,22 @@ export class ContentService {
 
   // ─── Private helpers ──────────────────────────────
 
-  private async requireActiveSubscription(userId: string): Promise<void> {
-    const sub = await prisma.subscription.findUnique({ where: { userId } });
+    private async requireActiveSubscription(userId: string): Promise<void> {
+      const sub = await prisma.subscription.findUnique({ where: { userId } });
 
-    const isActive =
-      sub &&
-      (sub.status === 'active' || sub.status === 'grace_period') &&
-      sub.currentPeriodEnd > new Date();
+      this.logger.debug({ 
+          userId, 
+          subscriptionStatus: sub?.status, 
+          periodEnd: sub?.currentPeriodEnd?.toISOString() 
+        }, 'Checking subscription access');
 
-    if (!isActive) throw new ForbiddenError('Active subscription required');
-  }
+      const now = new Date();
+      const isActive =
+        sub &&
+        (sub.status === 'active' || sub.status === 'grace_period') &&
+        sub.currentPeriodEnd.getTime() > now.getTime(); // ✅ Надёжное сравнение
+      if (!isActive) throw new ForbiddenError('Active subscription required');
+    }
 }
 
 export const contentService = new ContentService();

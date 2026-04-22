@@ -112,6 +112,18 @@ function VideoContent({ item }: { item: ContentItem }) {
 const API_BASE = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:3001';
 
 function PdfContent({ item }: { item: ContentItem }) {
+// Проверка: есть ли у урока прикреплённая статья
+  if (!item.articleId && !item.pdfUrl) {
+    return (
+      <div className="rounded-2xl border border-foreground/10 bg-foreground/[0.02] p-8 text-center">
+        <svg className="h-12 w-12 mx-auto text-foreground/20 mb-3" fill="none" stroke="currentColor" strokeWidth="1.5" viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v3.75m9-.75a9 9 0 1 1-18 0 9 9 0 0 1 18 0Zm-9 3.75h.008v.008H12v-.008Z" />
+        </svg>
+        <p className="text-foreground/40 font-body text-sm">Файл не прикреплён к этому уроку</p>
+        <p className="text-xs text-muted mt-1">Обратитесь к администратору</p>
+      </div>
+    );
+  }
   const [isFullscreen, setIsFullscreen] = useState(false);
 
   const {
@@ -124,6 +136,13 @@ function PdfContent({ item }: { item: ContentItem }) {
     queryFn: () => contentApi.requestArticleToken(item.id),
     staleTime: 20 * 60 * 1000, // reuse token for 20 min (TTL is 30 min)
     retry: 1,
+    onError: (error) => {
+      console.error('[PdfContent] Failed to fetch article token:', {
+        lessonId: item.id,
+        articleId: item.articleId,
+        error: error instanceof Error ? error.message : error,
+      });
+    },
   });
 
   const pdfUrl = tokenData?.token
@@ -236,10 +255,32 @@ export default function ContentPage({
     );
   }
 
-  if (isError || !item) {
+  if (isError) {
+    const message = error instanceof Error ? error.message : '';
+    
+    // Ошибка подписки/авторизации
+    if (message.toLowerCase().includes('subscription') || 
+        message.toLowerCase().includes('forbidden') ||
+        message.toLowerCase().includes('active')) {
+      return (
+        <div className="mx-auto max-w-3xl px-4 sm:px-6 py-20 text-center">
+          <p className="text-foreground/40 font-body text-sm mb-4">
+            Для доступа к этому материалу нужна активная подписка
+          </p>
+          <button
+            onClick={() => router.push('/dashboard')}
+            className="text-sm text-accent hover:underline font-body"
+          >
+            ← В личный кабинет
+          </button>
+        </div>
+      );
+    }
+    
+    // Материал не найден
     return (
       <div className="mx-auto max-w-3xl px-4 sm:px-6 py-20 text-center">
-        <p className="text-foreground/40 font-body text-sm mb-4">Материал не найден</p>
+        <p className="text-foreground/40 font-body text-sm mb-4">Материал не найден или снят с публикации</p>
         <button
           onClick={() => router.back()}
           className="text-sm text-accent hover:underline font-body"
