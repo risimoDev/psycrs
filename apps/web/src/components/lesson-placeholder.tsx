@@ -50,7 +50,7 @@ interface Props {
 export function LessonPlaceholder({ id, className = '' }: Props) {
   const rng = prng(id);
 
-  const palette = PALETTES[rng.int(0, PALETTES.length - 1)];
+  const palette = PALETTES[rng.int(0, PALETTES.length - 1)]!
   const W = 400;
   const H = 400;
 
