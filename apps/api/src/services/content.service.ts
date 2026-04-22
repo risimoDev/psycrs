@@ -1,6 +1,7 @@
 import { type ContentType } from '@prisma/client';
 import { prisma } from '../lib/prisma.js';
 import { ForbiddenError, NotFoundError } from '../lib/errors.js';
+import { getLogger } from '../lib/logger.js'; 
 
 export interface ContentItem {
   id: string;
@@ -21,6 +22,8 @@ export class ContentService {
    * List content by type for authenticated user.
    * Also attaches per-user `isMarkedViewed` flag from Progress table.
    */
+
+  private readonly logger = getLogger().child({ service: 'content' });
   async listByType(userId: string, type: ContentType): Promise<ContentItem[]> {
     await this.requireActiveSubscription(userId);
 
@@ -88,7 +91,7 @@ export class ContentService {
     if (!lesson) throw new NotFoundError('Content');
 
     this.logger.warn({ userId, lessonId }, 'Content not found');
-    
+
     const progress = await prisma.progress.findUnique({
       where: { userId_lessonId: { userId, lessonId } },
       select: { isMarkedViewed: true },
