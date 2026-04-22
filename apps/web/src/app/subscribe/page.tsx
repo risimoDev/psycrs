@@ -12,6 +12,8 @@ import { Button } from '../../components/button';
 
 const PERIOD_LABELS: Record<string, string> = {
   month: 'в месяц',
+  '2month': 'за 2 месяца',
+  '3month': 'за 3 месяца',
   year: 'в год',
   lifetime: 'навсегда',
 };

@@ -306,7 +306,7 @@ model Tariff {
     description String?
     price       Int // price in kopecks (e.g. 299000 = 2990.00 RUB)
     oldPrice    Int?     @map("old_price") // strikethrough "was" price in kopecks
-    period      String   @default("month") // month, year, lifetime
+    period      String   @default("month") // month, 2month, 3month, year, lifetime
     features    String[] @default([])
     isActive    Boolean  @default(true) @map("is_active")
     isPopular   Boolean  @default(false) @map("is_popular")

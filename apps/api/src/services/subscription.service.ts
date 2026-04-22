@@ -6,6 +6,8 @@ import { videoService } from './video.service.js';
 const SUBSCRIPTION_PERIOD_DAYS = 30;
 
 function periodToDays(period: string): number {
+  if (period === '2month') return 60;
+  if (period === '3month') return 90;
   if (period === 'year') return 365;
   if (period === 'lifetime') return 36500; // ~100 years
   return 30; // month or anything else
