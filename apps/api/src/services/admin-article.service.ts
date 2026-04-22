@@ -40,7 +40,7 @@ export class AdminArticleService {
     ]);
 
     return {
-      items: items.map((a) => ({
+      items: items.map((a: typeof items[number]) => ({
         ...a,
         size: a.size ? Number(a.size) : null,
         lessonCount: a._count.lessons,

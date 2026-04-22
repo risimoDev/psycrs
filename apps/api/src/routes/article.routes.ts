@@ -29,7 +29,7 @@ export async function articleRoutes(app: FastifyInstance) {
         throw new ValidationError('This lesson is not a PDF article');
       }
 
-      const articleId = (item as { articleId?: string }).articleId;
+      const articleId = item.articleId;
       if (!articleId) throw new ValidationError('No article attached to this lesson');
 
       const token = await adminArticleService.requestToken(

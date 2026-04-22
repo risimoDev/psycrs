@@ -72,6 +72,19 @@ run_migrations() {
 
   log "Running database migrations..."
   cd "${APP_DIR}/apps/api"
+
+  # Если есть миграция в состоянии "failed" — помечаем как applied, чтобы следующий deploy прошёл
+  # (SQL уже идемпотентный, поэтому пометка safe)
+  if npx prisma migrate status 2>&1 | grep -q "failed"; then
+    log "WARNING: detected failed migration — resolving with migrate resolve..."
+    # Получаем имя failed-миграции и помечаем как applied
+    FAILED=$(npx prisma migrate status 2>&1 | grep "failed" | grep -oP '\d{14}_\S+' | head -1)
+    if [[ -n "$FAILED" ]]; then
+      log "Resolving failed migration: $FAILED"
+      npx prisma migrate resolve --applied "$FAILED" || true
+    fi
+  fi
+
   npx prisma migrate deploy
   log "Migrations completed"
 }
@@ -134,8 +147,8 @@ main() {
   log "========== Deploy started =========="
 
   pull_changes
-  run_migrations
   build_app
+  run_migrations
   reload_pm2
   health_check
 

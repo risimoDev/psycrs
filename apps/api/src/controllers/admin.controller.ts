@@ -374,7 +374,7 @@ export class AdminController {
     const result = await adminArticleService.upload(
       data.file,
       data.filename,
-      data.file.readableLength ?? undefined,
+      undefined,
       request.userId,
     );
     return reply.status(201).send(result);
