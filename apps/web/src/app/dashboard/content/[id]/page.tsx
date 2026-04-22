@@ -248,7 +248,7 @@ export default function ContentPage({
     );
   }
 
-  if (isError) {
+  if (isError || !item) {
     const message = error instanceof Error ? error.message : '';
     
     // Ошибка подписки/авторизации
@@ -269,7 +269,7 @@ export default function ContentPage({
         </div>
       );
     }
-    
+    if (!item) return null;
     // Материал не найден
     return (
       <div className="mx-auto max-w-3xl px-4 sm:px-6 py-20 text-center">
