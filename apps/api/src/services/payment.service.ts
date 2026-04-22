@@ -30,13 +30,29 @@ export class PaymentService {
   }
 
   /** Start subscription payment flow */
-  async startSubscription(userId: string): Promise<CreatePaymentResult> {
+  async startSubscription(userId: string, tariffId?: string): Promise<CreatePaymentResult> {
     const env = getEnv();
-    const idempotenceKey = `sub_${userId}_${Date.now()}`;
 
-    // Prevent duplicate pending payments
+    // Look up tariff if provided
+    let amount = env.SUBSCRIPTION_PRICE;
+    let description = 'Подписка на курс — 30 дней';
+    let resolvedTariffId: string | undefined;
+
+    if (tariffId) {
+      const tariff = await prisma.tariff.findUnique({ where: { id: tariffId, isActive: true } });
+      if (tariff) {
+        // Price stored in kopecks → convert to rubles for YooKassa
+        amount = tariff.price / 100;
+        description = `${tariff.title} — ${tariff.period === 'year' ? '365 дней' : tariff.period === 'lifetime' ? 'навсегда' : '30 дней'}`;
+        resolvedTariffId = tariff.id;
+      }
+    }
+
+    const idempotenceKey = `sub_${userId}_${resolvedTariffId ?? 'default'}_${Date.now()}`;
+
+    // Prevent duplicate pending payments for the same tariff
     const pendingPayment = await prisma.payment.findFirst({
-      where: { userId, status: 'pending' },
+      where: { userId, status: 'pending', tariffId: resolvedTariffId ?? null },
       orderBy: { createdAt: 'desc' },
     });
 
@@ -53,10 +69,11 @@ export class PaymentService {
       data: {
         userId,
         idempotenceKey,
-        amount: env.SUBSCRIPTION_PRICE,
+        amount,
         currency: 'RUB',
-        description: 'Подписка на курс — 30 дней',
+        description,
         status: 'pending',
+        tariffId: resolvedTariffId ?? null,
       },
     });
 
@@ -64,9 +81,9 @@ export class PaymentService {
     try {
       const result = await this.getProvider().createPayment({
         userId,
-        amount: env.SUBSCRIPTION_PRICE,
+        amount,
         currency: 'RUB',
-        description: 'Подписка на курс — 30 дней',
+        description,
         idempotenceKey,
         returnUrl: env.PAYMENT_RETURN_URL,
         metadata: { userId, internalPaymentId: localPayment.id },
@@ -134,6 +151,7 @@ export class PaymentService {
       // 3. Update payment status
       const payment = await tx.payment.findUnique({
         where: { externalId: event.paymentExternalId },
+        include: { tariff: true },
       });
 
       if (!payment) {
@@ -152,7 +170,7 @@ export class PaymentService {
       // 4. Process by event type
       switch (event.type) {
         case 'payment.succeeded':
-          await subscriptionService.activateSubscription(payment.userId);
+          await subscriptionService.activateSubscription(payment.userId, payment.tariff ?? undefined);
           this.logger.info(
             { userId: payment.userId, paymentId: payment.id },
             'Payment succeeded — subscription activated',

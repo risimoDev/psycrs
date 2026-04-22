@@ -94,10 +94,12 @@ model Payment {
     status          PaymentStatus @default(pending)
     description     String?
     confirmationUrl String?       @map("confirmation_url")
+    tariffId        String?       @map("tariff_id") @db.Uuid
     createdAt       DateTime      @default(now()) @map("created_at")
     updatedAt       DateTime      @updatedAt @map("updated_at")
 
-    user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+    user   User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+    tariff Tariff? @relation(fields: [tariffId], references: [id], onDelete: SetNull)
 
     @@index([userId])
     @@index([status])
@@ -311,6 +313,8 @@ model Tariff {
     order       Int      @default(0)
     createdAt   DateTime @default(now()) @map("created_at")
     updatedAt   DateTime @updatedAt @map("updated_at")
+
+    payments Payment[]
 
     @@index([order])
     @@index([isActive])

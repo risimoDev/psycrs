@@ -3,8 +3,8 @@
 import { useState } from 'react';
 import type React from 'react';
 import Link from 'next/link';
-import { useQuery, useMutation } from '@tanstack/react-query';
-import { subscriptionApi, contentApi, paymentApi, type ContentItem, type ContentType, API_BASE } from '../../lib/api';
+import { useQuery } from '@tanstack/react-query';
+import { subscriptionApi, contentApi, type ContentItem, type ContentType, API_BASE } from '../../lib/api';
 import { Button } from '../../components/button';
 import { CheckIcon } from '../../components/icons';
 import { LessonPlaceholder } from '../../components/lesson-placeholder';
@@ -183,13 +183,6 @@ function ContentGrid({ type }: { type: TabId }) {
 // ─── No-subscription state ────────────────────────────────
 
 function NoSubscription() {
-  const payMut = useMutation({
-    mutationFn: paymentApi.create,
-    onSuccess: (data) => {
-      window.location.href = data.confirmationUrl;
-    },
-  });
-
   return (
     <div className="flex flex-col items-center justify-center py-20 px-4 text-center">
       <div
@@ -207,12 +200,9 @@ function NoSubscription() {
       <p className="text-sm text-muted font-body max-w-xs mb-8">
         Для доступа к материалам курса оформите подписку
       </p>
-      {payMut.isError && (
-        <p className="text-sm text-red-400 mb-4">Не удалось создать платёж. Попробуйте ещё раз.</p>
-      )}
-      <Button size="lg" loading={payMut.isPending} onClick={() => payMut.mutate()}>
-        Выбрать тариф
-      </Button>
+      <Link href="/subscribe">
+        <Button size="lg">Выбрать тариф</Button>
+      </Link>
     </div>
   );
 }

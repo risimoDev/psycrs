@@ -147,8 +147,8 @@ function LessonForm({
         </div>
       </div>
 
-      <div className="grid grid-cols-2 gap-4">
-        <div className="col-span-2">
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+        <div className="sm:col-span-2">
           <label className="block text-xs font-body text-muted mb-1">Название *</label>
           <input
             required
@@ -190,7 +190,7 @@ function LessonForm({
           />
         </div>
 
-        <div className="col-span-2">
+        <div className="sm:col-span-2">
           <label className="block text-xs font-body text-muted mb-1">Описание</label>
           <textarea
             value={description}
@@ -204,7 +204,7 @@ function LessonForm({
         {/* Видео — для лекций и аффирмаций */}
         {needsVideo && (
           <>
-            <div className="col-span-2">
+            <div className="sm:col-span-2">
               <label className="block text-xs font-body text-muted mb-1">Видео *</label>
               <div className="flex gap-2">
                 <select
@@ -243,7 +243,7 @@ function LessonForm({
 
         {/* PDF статья — выбор из загруженных */}
         {needsPdf && (
-          <div className="col-span-2">
+          <div className="sm:col-span-2">
             <label className="block text-xs font-body text-muted mb-1">Статья PDF *</label>
             <select
               required={needsPdf}
@@ -267,7 +267,7 @@ function LessonForm({
           </div>
         )}
 
-        <div className="col-span-2 flex items-center">
+        <div className="sm:col-span-2 flex items-center">
           <label className="flex items-center gap-2 cursor-pointer">
             <input
               type="checkbox"
@@ -280,7 +280,7 @@ function LessonForm({
         </div>
 
         {/* Превью */}
-        <div className="col-span-2">
+        <div className="sm:col-span-2">
           <label className="block text-xs font-body text-muted mb-2">Превью</label>
           <div className="flex items-start gap-3">
             {/* Preview image or placeholder */}
@@ -444,7 +444,7 @@ export default function LessonsPage() {
 
   return (
     <div>
-      <div className="flex items-center justify-between mb-6">
+      <div className="flex flex-wrap items-start justify-between gap-3 mb-6">
         <div>
           <h1 className="font-heading text-2xl font-semibold text-foreground">Уроки</h1>
           {data && (
@@ -483,7 +483,8 @@ export default function LessonsPage() {
               </h2>
 
               <div className="border border-foreground/10 rounded-lg overflow-hidden">
-                <table className="w-full text-sm font-body">
+                <div className="overflow-x-auto">
+                <table className="w-full min-w-[480px] text-sm font-body">
                   <thead>
                     <tr className="bg-foreground/5 border-b border-foreground/10">
                       <th className="text-left px-4 py-2.5 text-muted font-medium w-12">#</th>
@@ -570,6 +571,7 @@ export default function LessonsPage() {
                       ))}
                   </tbody>
                 </table>
+                </div>
               </div>
             </div>
           ))}

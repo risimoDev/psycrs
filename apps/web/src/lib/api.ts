@@ -179,8 +179,8 @@ export interface PaymentResult {
 }
 
 export const paymentApi = {
-  create: () =>
-    request<PaymentResult>('/payment/create', { method: 'POST' }),
+  create: (tariffId: string) =>
+    request<PaymentResult>('/payment/create', { method: 'POST', body: { tariffId } }),
 };
 
 // ─── Video / Lessons ───────────────────────────────────

@@ -151,7 +151,7 @@ export default function UsersPage() {
       <h1 className="font-heading text-2xl font-semibold text-foreground mb-6">Пользователи</h1>
 
       {/* Search */}
-      <form onSubmit={handleSearch} className="flex gap-2 mb-6">
+      <form onSubmit={handleSearch} className="flex flex-wrap gap-2 mb-6">
         <input
           type="text"
           value={searchInput}
@@ -172,7 +172,8 @@ export default function UsersPage() {
       ) : (
         <>
           <div className="border border-foreground/10 rounded-lg overflow-hidden">
-            <table className="w-full text-sm font-body">
+            <div className="overflow-x-auto">
+            <table className="w-full min-w-[700px] text-sm font-body">
               <thead>
                 <tr className="border-b border-foreground/10 bg-foreground/[0.03]">
                   <th className="text-left px-4 py-3 text-xs font-medium text-foreground/50 uppercase tracking-wider">Email</th>
@@ -249,6 +250,7 @@ export default function UsersPage() {
                 )}
               </tbody>
             </table>
+            </div>
           </div>
 
           {/* Pagination */}

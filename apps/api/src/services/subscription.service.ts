@@ -5,13 +5,20 @@ import { videoService } from './video.service.js';
 
 const SUBSCRIPTION_PERIOD_DAYS = 30;
 
+function periodToDays(period: string): number {
+  if (period === 'year') return 365;
+  if (period === 'lifetime') return 36500; // ~100 years
+  return 30; // month or anything else
+}
+
 export class SubscriptionService {
   private readonly logger = getLogger().child({ service: 'subscription' });
 
   /** Activate or extend subscription after successful payment */
-  async activateSubscription(userId: string): Promise<void> {
+  async activateSubscription(userId: string, tariff?: { period: string }): Promise<void> {
+    const days = tariff ? periodToDays(tariff.period) : SUBSCRIPTION_PERIOD_DAYS;
     const now = new Date();
-    const periodEnd = new Date(now.getTime() + SUBSCRIPTION_PERIOD_DAYS * 24 * 60 * 60 * 1000);
+    const periodEnd = new Date(now.getTime() + days * 24 * 60 * 60 * 1000);
 
     await prisma.$transaction(async (tx) => {
       const existing = await tx.subscription.findUnique({
@@ -21,7 +28,7 @@ export class SubscriptionService {
       if (existing) {
         // Extend: use current period end if still active, otherwise start from now
         const baseDate = existing.currentPeriodEnd > now ? existing.currentPeriodEnd : now;
-        const newEnd = new Date(baseDate.getTime() + SUBSCRIPTION_PERIOD_DAYS * 24 * 60 * 60 * 1000);
+        const newEnd = new Date(baseDate.getTime() + days * 24 * 60 * 60 * 1000);
 
         await tx.subscription.update({
           where: { userId },

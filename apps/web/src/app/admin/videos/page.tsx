@@ -65,7 +65,7 @@ export default function VideosPage() {
 
   return (
     <div>
-      <div className="flex items-center justify-between mb-6">
+      <div className="flex flex-wrap items-center justify-between gap-3 mb-6">
         <h1 className="font-heading text-2xl font-semibold text-foreground">Видео</h1>
         <div className="flex items-center gap-3">
           <input
@@ -109,7 +109,7 @@ export default function VideosPage() {
       )}
 
       {/* Filters */}
-      <div className="flex gap-2 mb-4">
+      <div className="flex flex-wrap gap-2 mb-4">
         {[
           { value: undefined, label: 'Все' },
           { value: 'ready', label: 'Готовые' },
@@ -135,7 +135,8 @@ export default function VideosPage() {
       ) : (
         <>
           <div className="border border-foreground/10 rounded-lg overflow-hidden">
-            <table className="w-full text-sm font-body">
+            <div className="overflow-x-auto">
+            <table className="w-full min-w-[600px] text-sm font-body">
               <thead>
                 <tr className="bg-foreground/5 border-b border-foreground/10">
                   <th className="text-left px-4 py-3 text-muted font-medium">Файл</th>
@@ -200,6 +201,7 @@ export default function VideosPage() {
                 })}
               </tbody>
             </table>
+            </div>
           </div>
 
           {totalPages > 1 && (

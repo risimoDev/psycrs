@@ -56,7 +56,7 @@ export default function SubscriptionsPage() {
       <h1 className="font-heading text-2xl font-semibold text-foreground mb-6">Подписки</h1>
 
       {/* Filter */}
-      <div className="flex gap-2 mb-6">
+      <div className="flex flex-wrap gap-2 mb-6">
         {STATUS_OPTIONS.map((opt) => (
           <button
             key={opt.value}
@@ -77,7 +77,8 @@ export default function SubscriptionsPage() {
       ) : (
         <>
           <div className="border border-foreground/10 rounded-lg overflow-hidden">
-            <table className="w-full text-sm font-body">
+            <div className="overflow-x-auto">
+            <table className="w-full min-w-[500px] text-sm font-body">
               <thead>
                 <tr className="bg-foreground/5 border-b border-foreground/10">
                   <th className="text-left px-4 py-3 text-foreground/50 font-medium">Пользователь</th>
@@ -117,6 +118,7 @@ export default function SubscriptionsPage() {
                 ))}
               </tbody>
             </table>
+            </div>
           </div>
 
           <div className="flex items-center justify-between mt-4">
