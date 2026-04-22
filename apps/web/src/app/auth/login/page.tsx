@@ -21,7 +21,7 @@ export default function LoginPage() {
 
     try {
       await login(email, password);
-      router.push('/course');
+      router.push('/dashboard');
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Ошибка авторизации');
     } finally {

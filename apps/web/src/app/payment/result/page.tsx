@@ -61,7 +61,7 @@ export default function PaymentResultPage() {
               <p className="text-muted font-body mb-6">
                 Ваша подписка активирована. Теперь вам доступны все уроки курса.
               </p>
-              <Button onClick={() => router.push('/course')}>
+              <Button onClick={() => router.push('/dashboard')}>
                 Начать обучение
               </Button>
             </>

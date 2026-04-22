@@ -32,7 +32,7 @@ export default function RegisterPage() {
     setLoading(true);
     try {
       await register(email, password);
-      router.push('/course');
+      router.push('/dashboard');
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Ошибка регистрации');
     } finally {
