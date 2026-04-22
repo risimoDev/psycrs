@@ -37,7 +37,7 @@ function prng(seed: string) {
       return Math.floor(this.next() * (max - min + 1)) + min;
     },
     pick<T>(arr: T[]): T {
-      return arr[Math.floor(this.next() * arr.length)];
+      return arr[Math.floor(this.next() * arr.length)] as T;
     },
   };
 }
