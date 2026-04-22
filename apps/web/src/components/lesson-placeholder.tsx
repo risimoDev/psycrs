@@ -130,7 +130,9 @@ export function LessonPlaceholder({ id, className = '' }: Props) {
   // Shuffle shapes for layering
   for (let i = shapes.length - 1; i > 0; i--) {
     const j = rng.int(0, i);
-    [shapes[i], shapes[j]] = [shapes[j], shapes[i]];
+    const tmp = shapes[i]!;
+    shapes[i] = shapes[j]!;
+    shapes[j] = tmp;
   }
 
   return (
