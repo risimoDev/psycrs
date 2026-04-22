@@ -67,26 +67,35 @@ pull_changes() {
 run_migrations() {
   if [[ "$SKIP_MIGRATIONS" == "true" ]]; then
     log "Skipping migrations (--skip-migrations)"
-    return
+    return 0
   fi
 
   log "Running database migrations..."
   cd "${APP_DIR}/apps/api"
 
-  # Если есть миграция в состоянии "failed" — помечаем как applied, чтобы следующий deploy прошёл
-  # (SQL уже идемпотентный, поэтому пометка safe)
-  if npx prisma migrate status 2>&1 | grep -q "failed"; then
+  # Если есть миграция в состоянии "failed" — помечаем как applied
+  # (SQL идемпотентный, поэтому пометка safe)
+  local migrate_status
+  migrate_status=$(npx prisma migrate status 2>&1) || true
+  if echo "$migrate_status" | grep -q "failed"; then
     log "WARNING: detected failed migration — resolving with migrate resolve..."
-    # Получаем имя failed-миграции и помечаем как applied
-    FAILED=$(npx prisma migrate status 2>&1 | grep "failed" | grep -oP '\d{14}_\S+' | head -1)
+    FAILED=$(echo "$migrate_status" | grep -oP '\d{14}_\S+' | head -1)
     if [[ -n "$FAILED" ]]; then
       log "Resolving failed migration: $FAILED"
       npx prisma migrate resolve --applied "$FAILED" || true
     fi
   fi
 
-  npx prisma migrate deploy
-  log "Migrations completed"
+  # НЕ используем set -e здесь: если миграция упала, deploy продолжается
+  # PM2 перезагружается с новым кодом, а роуты всё равно будут зарегистрированы
+  if npx prisma migrate deploy; then
+    log "Migrations completed"
+  else
+    err "Migration failed! Routes will still be registered. Fix DB manually, then run:"
+    err "  cd ${APP_DIR}/apps/api && npx prisma migrate deploy"
+  fi
+
+  return 0  # никогда не прерываем deploy из-за миграции
 }
 
 # ─── Build ────────────────────────────────────────────────
@@ -104,7 +113,7 @@ build_app() {
   npx prisma generate
   cd "$APP_DIR"
 
-  npx turbo build || die "Build failed — aborting deploy. PM2 still running old version."
+  npx turbo build --force || die "Build failed — aborting deploy. PM2 still running old version."
   log "Build completed"
 }
 
