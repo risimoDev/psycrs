@@ -1,6 +1,6 @@
 'use client';
 
-import { use, useState } from 'react';
+import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
@@ -245,9 +245,9 @@ function PdfContent({ item }: { item: ContentItem }) {
 export default function ContentPage({
   params,
 }: {
-  params: Promise<{ id: string }>;
+  params: { id: string };
 }) {
-  const { id } = use(params);
+  const { id } = params;
   const router = useRouter();
 
   const { data: item, isLoading, isError, error  } = useQuery({
