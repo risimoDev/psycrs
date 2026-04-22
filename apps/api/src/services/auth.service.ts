@@ -37,7 +37,7 @@ export class AuthService {
   async register(email: string, password: string): Promise<TokenPair> {
     const existing = await prisma.user.findUnique({ where: { email } });
     if (existing) {
-      throw new ConflictError('User with this email already exists');
+      throw new ConflictError('Пользователь с таким email уже зарегистрирован');
     }
 
     const passwordHash = await bcrypt.hash(password, BCRYPT_ROUNDS);
@@ -53,12 +53,12 @@ export class AuthService {
   async login(email: string, password: string): Promise<TokenPair> {
     const user = await prisma.user.findUnique({ where: { email } });
     if (!user) {
-      throw new UnauthorizedError('Invalid email or password');
+      throw new UnauthorizedError('Неверный email или пароль');
     }
 
     const valid = await bcrypt.compare(password, user.passwordHash);
     if (!valid) {
-      throw new UnauthorizedError('Invalid email or password');
+      throw new UnauthorizedError('Неверный email или пароль');
     }
 
     this.logger.info({ userId: user.id }, 'User logged in');
@@ -76,7 +76,7 @@ export class AuthService {
 
     // Token not found
     if (!stored) {
-      throw new UnauthorizedError('Invalid refresh token');
+      throw new UnauthorizedError('Недействительный токен сессии');
     }
 
     // Token already revoked — potential theft (reuse detection)
@@ -86,7 +86,7 @@ export class AuthService {
         'Refresh token reuse detected — revoking all tokens for user',
       );
       await this.revokeAllUserTokens(stored.userId);
-      throw new ForbiddenError('Refresh token reuse detected — all sessions revoked');
+      throw new ForbiddenError('Обнаружено подозрительное использование сессии — все сессии завершены');
     }
 
     // Token expired
@@ -95,7 +95,7 @@ export class AuthService {
         where: { id: stored.id },
         data: { revokedAt: new Date() },
       });
-      throw new UnauthorizedError('Refresh token expired');
+      throw new UnauthorizedError('Сессия истекла, войдите снова');
     }
 
     // Issue new pair and rotate

@@ -104,7 +104,7 @@ async function request<T>(path: string, options: FetchOptions = {}): Promise<T> 
 
       if (retryRes.status === 204) return undefined as T;
       const retryData = await retryRes.json();
-      if (!retryRes.ok) throw new ApiError(retryRes.status, retryData.message ?? 'Request failed');
+      if (!retryRes.ok) throw new ApiError(retryRes.status, retryData.message ?? 'Ошибка запроса');
       return retryData as T;
     }
   }
@@ -112,7 +112,7 @@ async function request<T>(path: string, options: FetchOptions = {}): Promise<T> 
   const data = await res.json();
 
   if (!res.ok) {
-    throw new ApiError(res.status, data.message ?? 'Request failed');
+    throw new ApiError(res.status, data.message ?? 'Ошибка запроса');
   }
 
   return data as T;
