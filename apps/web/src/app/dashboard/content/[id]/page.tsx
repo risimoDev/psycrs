@@ -130,14 +130,6 @@ function PdfContent({ item }: { item: ContentItem }) {
     ? `${API_BASE}/articles/read?token=${encodeURIComponent(tokenData.token)}`
     : null;
 
-  if (!item.articleId && !item.pdfUrl) {
-    return (
-      <div className="rounded-2xl border border-foreground/10 bg-foreground/[0.02] p-8 text-center">
-        <p className="text-foreground/30 font-body text-sm">Файл не прикреплён</p>
-      </div>
-    );
-  }
-
   if (isLoading) {
     return (
       <div className="w-full rounded-2xl bg-foreground/5 flex items-center justify-center" style={{ height: '520px' }}>

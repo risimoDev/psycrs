@@ -4,6 +4,7 @@ import { requireAuth } from '../middleware/auth.middleware.js';
 import { adminArticleService } from '../services/admin-article.service.js';
 import { ValidationError } from '../lib/errors.js';
 import { contentService } from '../services/content.service.js';
+import { prisma } from '../lib/prisma.js';
 
 export async function articleRoutes(app: FastifyInstance) {
   /**
@@ -22,14 +23,16 @@ export async function articleRoutes(app: FastifyInstance) {
 
       if (!body.success) throw new ValidationError('lessonId is required');
 
-      // Verify subscription and get article via content service
-      const item = await contentService.getById(req.userId, body.data.lessonId);
+      // Verify subscription via content service
+      await contentService.getById(req.userId, body.data.lessonId);
 
-      if (item.contentType !== 'article_pdf') {
-        throw new ValidationError('This lesson is not a PDF article');
-      }
+      // Look up articleId directly — decoupled from ContentItem to avoid DB column dependency
+      const lesson = await prisma.lesson.findUnique({
+        where: { id: body.data.lessonId },
+        select: { articleId: true },
+      });
 
-      const articleId = item.articleId;
+      const articleId = lesson?.articleId;
       if (!articleId) throw new ValidationError('No article attached to this lesson');
 
       const token = await adminArticleService.requestToken(

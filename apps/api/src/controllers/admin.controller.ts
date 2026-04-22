@@ -371,6 +371,7 @@ export class AdminController {
     if (!data.filename.toLowerCase().endsWith('.pdf') && data.mimetype !== 'application/pdf') {
       throw new ValidationError('Only PDF files are allowed');
     }
+    request.log.info({ filename: data.filename, mimetype: data.mimetype }, 'Article upload started');
     const result = await adminArticleService.upload(
       data.file,
       data.filename,

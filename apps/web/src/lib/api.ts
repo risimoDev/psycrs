@@ -203,7 +203,6 @@ export interface ContentItem {
   order: number;
   contentType: ContentType;
   pdfUrl: string | null;
-  articleId: string | null;
   duration: number | null;
   videoId: string | null;
   isMarkedViewed: boolean;
