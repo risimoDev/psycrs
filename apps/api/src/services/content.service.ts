@@ -88,9 +88,10 @@ export class ContentService {
       },
     });
 
-    if (!lesson) throw new NotFoundError('Content');
-
-    this.logger.warn({ userId, lessonId }, 'Content not found');
+    if (!lesson) {
+      this.logger.warn({ userId, lessonId }, 'Content not found');
+      throw new NotFoundError('Content');
+    }
 
     const progress = await prisma.progress.findUnique({
       where: { userId_lessonId: { userId, lessonId } },

@@ -4,7 +4,7 @@ import { use, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { contentApi, videoApi, type ContentItem } from '../../../../lib/api';
+import { contentApi, videoApi, API_BASE, type ContentItem } from '../../../../lib/api';
 import { VideoPlayer } from '../../../../components/video-player';
 import { CheckIcon } from '../../../../components/icons';
 
@@ -96,12 +96,25 @@ function VideoContent({ item }: { item: ContentItem }) {
     );
   }
 
+  // The API returns relative paths — prefix with API origin so HLS.js and Shaka
+  // resolve requests against the API server, not the Next.js frontend.
+  const absoluteSrc = `${API_BASE}${playback.playbackUrl}`;
+  const absoluteDrm = playback.drm
+    ? {
+        ...playback.drm,
+        dashUrl: `${API_BASE}${playback.drm.dashUrl}`,
+        ...(playback.drm.widevineUrl
+          ? { widevineUrl: `${API_BASE}${playback.drm.widevineUrl}` }
+          : {}),
+      }
+    : undefined;
+
   return (
     <div className="overflow-hidden rounded-2xl bg-black">
       <VideoPlayer
-        src={playback.playbackUrl}
+        src={absoluteSrc}
         lessonId={item.id}
-        drm={playback.drm}
+        drm={absoluteDrm}
       />
     </div>
   );
@@ -109,11 +122,30 @@ function VideoContent({ item }: { item: ContentItem }) {
 
 // ─── PDF content (protected) ──────────────────────────────
 
-const API_BASE = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:3001';
-
 function PdfContent({ item }: { item: ContentItem }) {
-// Проверка: есть ли у урока прикреплённая статья
-  if (!item.articleId && !item.pdfUrl) {
+  // Hooks must always be called before any conditional return (Rules of Hooks)
+  const [isFullscreen, setIsFullscreen] = useState(false);
+
+  const hasArticle = !!(item.articleId || item.pdfUrl);
+
+  const {
+    data: tokenData,
+    isLoading,
+    isError,
+    refetch,
+  } = useQuery({
+    queryKey: ['article-token', item.id],
+    queryFn: () => contentApi.requestArticleToken(item.id),
+    // Token is single-use: revoked immediately after the iframe loads the PDF.
+    // Never cache — request a fresh token on every component mount.
+    staleTime: 0,
+    gcTime: 0,
+    enabled: hasArticle,
+    retry: 1,
+  });
+
+  // Проверка: есть ли у урока прикреплённая статья
+  if (!hasArticle) {
     return (
       <div className="rounded-2xl border border-foreground/10 bg-foreground/[0.02] p-8 text-center">
         <svg className="h-12 w-12 mx-auto text-foreground/20 mb-3" fill="none" stroke="currentColor" strokeWidth="1.5" viewBox="0 0 24 24">
@@ -124,19 +156,6 @@ function PdfContent({ item }: { item: ContentItem }) {
       </div>
     );
   }
-  const [isFullscreen, setIsFullscreen] = useState(false);
-
-  const {
-    data: tokenData,
-    isLoading,
-    isError,
-    refetch,
-  } = useQuery({
-    queryKey: ['article-token', item.id],
-    queryFn: () => contentApi.requestArticleToken(item.id),
-    staleTime: 20 * 60 * 1000, // reuse token for 20 min (TTL is 30 min)
-    retry: 1,
-  });
 
   const pdfUrl = tokenData?.token
     ? `${API_BASE}/articles/read?token=${encodeURIComponent(tokenData.token)}`
