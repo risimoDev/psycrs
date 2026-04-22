@@ -136,13 +136,6 @@ function PdfContent({ item }: { item: ContentItem }) {
     queryFn: () => contentApi.requestArticleToken(item.id),
     staleTime: 20 * 60 * 1000, // reuse token for 20 min (TTL is 30 min)
     retry: 1,
-    onError: (error) => {
-      console.error('[PdfContent] Failed to fetch article token:', {
-        lessonId: item.id,
-        articleId: item.articleId,
-        error: error instanceof Error ? error.message : error,
-      });
-    },
   });
 
   const pdfUrl = tokenData?.token
