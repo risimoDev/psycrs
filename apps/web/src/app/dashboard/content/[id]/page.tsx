@@ -231,7 +231,7 @@ export default function ContentPage({
   const { id } = use(params);
   const router = useRouter();
 
-  const { data: item, isLoading, isError } = useQuery({
+  const { data: item, isLoading, isError, error  } = useQuery({
     queryKey: ['content', 'item', id],
     queryFn: () => contentApi.getById(id),
     staleTime: 30_000,
