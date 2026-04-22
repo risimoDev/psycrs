@@ -3,6 +3,8 @@ import cors from '@fastify/cors';
 import helmet from '@fastify/helmet';
 import rateLimit from '@fastify/rate-limit';
 import multipart from '@fastify/multipart';
+import staticPlugin from '@fastify/static';
+import * as nodePath from 'node:path';
 import { getEnv } from './config/env.js';
 import { getLogger } from './lib/logger.js';
 import { AppError } from './lib/errors.js';
@@ -75,6 +77,13 @@ export async function buildApp(): Promise<FastifyInstance> {
 
     logger.error({ err: error, url: request.url }, 'Unhandled error');
     return reply.status(500).send({ message: 'Internal server error' });
+  });
+
+  // ─── Static file serving (review images, etc.) ───────────
+  await app.register(staticPlugin, {
+    root: nodePath.resolve(process.cwd(), 'storage'),
+    prefix: '/storage/',
+    decorateReply: false,
   });
 
   // ─── Health check ─────────────────────────────────
