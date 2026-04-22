@@ -69,6 +69,16 @@ async function request<T>(path: string, options: FetchOptions = {}): Promise<T> 
     ...(!isFormData && { 'Content-Type': 'application/json' }),
     ...(customHeaders as Record<string, string>),
   };
+
+  // Добавляем Authorization ко всем защищённым запросам
+  if (
+    accessToken &&
+    !path.startsWith('/auth/login') &&
+    !path.startsWith('/auth/register') &&
+    !path.startsWith('/auth/refresh')
+  ) {
+    headers['Authorization'] = `Bearer ${accessToken}`;
+  }
   
   const res = await fetch(`${API_BASE}${path}`, {
     ...rest,
