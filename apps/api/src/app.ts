@@ -8,6 +8,7 @@ import * as nodePath from 'node:path';
 import { getEnv } from './config/env.js';
 import { getLogger } from './lib/logger.js';
 import { AppError } from './lib/errors.js';
+import { ZodError } from 'zod';
 import { authRoutes } from './routes/auth.routes.js';
 import { adminRoutes } from './routes/admin.routes.js';
 import { paymentRoutes } from './routes/payment.routes.js';
@@ -62,6 +63,10 @@ export async function buildApp(): Promise<FastifyInstance> {
 
   // ─── Error handler ────────────────────────────────
   app.setErrorHandler((error, request, reply) => {
+    if (error instanceof ZodError) {
+      return reply.status(400).send({ message: error.issues[0]?.message ?? 'Validation error' });
+    }
+
     if (error instanceof AppError) {
       // DuplicateWebhookError returns 200 OK
       if (error.statusCode === 200) {

@@ -35,11 +35,13 @@ export default function ReviewsPage() {
   const approveMut = useMutation({
     mutationFn: adminApi.approveReview,
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ['admin', 'reviews'] }),
+    onError: (err) => alert(err.message || 'Ошибка одобрения'),
   });
 
   const rejectMut = useMutation({
     mutationFn: adminApi.rejectReview,
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ['admin', 'reviews'] }),
+    onError: (err) => alert(err.message || 'Ошибка отклонения'),
   });
 
   const filtered = (data?.items ?? []).filter((r: UserReview) => {

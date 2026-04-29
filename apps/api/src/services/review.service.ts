@@ -23,17 +23,16 @@ export class ReviewService {
   }
 
   async getPublicApproved() {
-    return prisma.userReview.findMany({
-      where: { status: 'approved' },
-      orderBy: { createdAt: 'desc' },
-      select: {
-        id: true,
-        name: true,
-        text: true,
-        rating: true,
-        createdAt: true,
-      },
-    });
+    const reviews = await prisma.$queryRaw<
+      { id: string; name: string; text: string; rating: number; createdAt: Date }[]
+    >`
+      SELECT id, name, text, rating, created_at as "createdAt"
+      FROM user_reviews
+      WHERE status = 'approved'
+      ORDER BY RANDOM()
+      LIMIT 20
+    `;
+    return reviews;
   }
 
   async getMyReview(userId: string) {

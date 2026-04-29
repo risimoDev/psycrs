@@ -207,6 +207,15 @@ export function ReviewCarousel() {
       .getPublic()
       .then((data) => setReviews(data))
       .catch(() => {});
+
+    const interval = setInterval(() => {
+      reviewsApi
+        .getPublic()
+        .then((data) => setReviews(data))
+        .catch(() => {});
+    }, 30_000);
+
+    return () => clearInterval(interval);
   }, []);
 
   useEffect(() => {
