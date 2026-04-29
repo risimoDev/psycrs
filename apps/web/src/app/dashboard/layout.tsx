@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { useAuthStore } from '../../lib/auth-store';
 import { useThemeStore } from '../../lib/theme-store';
+import { BackButton } from '../../components/back-button';
 
 function ThemeToggle() {
   const { theme, toggle } = useThemeStore();
@@ -56,9 +57,12 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
       {/* Top bar */}
       <header className="sticky top-0 z-30 h-14 border-b border-foreground/5 bg-background/90 backdrop-blur-xl">
         <div className="mx-auto flex h-full max-w-6xl items-center justify-between px-4 sm:px-6">
-          <Link href="/" className="font-heading text-lg font-bold text-foreground">
-            Psyho<span className="text-accent">Course</span>
-          </Link>
+          <div className="flex items-center gap-3">
+            <Link href="/" className="font-heading text-lg font-bold text-foreground">
+              Psyho<span className="text-accent">Course</span>
+            </Link>
+            <BackButton />
+          </div>
 
           <div className="flex items-center gap-1">
             <ThemeToggle />

@@ -4,6 +4,7 @@ import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import { useEffect, useState, type ReactNode } from 'react';
 import { useAuthStore } from '../../lib/auth-store';
+import { BackButton } from '../../components/back-button';
 
 const NAV_ITEMS = [
   { href: '/admin/dashboard', label: 'Дашборд' },
@@ -80,10 +81,11 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
         transition-transform duration-200 ease-in-out
         ${sidebarOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'}
       `.trim()}>
-        <div className="h-14 lg:h-16 flex items-center px-5 border-b border-foreground/10">
+        <div className="h-14 lg:h-16 flex items-center px-5 border-b border-foreground/10 gap-3">
           <Link href="/" className="font-heading text-lg font-semibold text-foreground">
             Psyho<span className="text-accent">Admin</span>
           </Link>
+          <BackButton />
         </div>
 
         <nav className="flex-1 py-4 px-3 space-y-1 overflow-y-auto">

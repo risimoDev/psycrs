@@ -90,6 +90,24 @@ export class NotificationService {
     this.logger.info({ lessonTitle, recipientCount: activeUsers.length }, 'New lesson notifications sent');
   }
 
+  /** Password reset email */
+  async sendPasswordReset(email: string, token: string): Promise<void> {
+    const env = getEnv();
+    const resetUrl = `${env.CORS_ORIGIN}/auth/reset-password?token=${token}`;
+
+    await this.sendEmail(
+      email,
+      'Восстановление пароля — PsyhoCourse',
+      this.wrapHtml(`
+        <h2>Восстановление пароля</h2>
+        <p>Вы запросили восстановление пароля для аккаунта на PsyhoCourse.</p>
+        <p>Нажмите на кнопку ниже, чтобы установить новый пароль. Ссылка действительна в течение 1 часа.</p>
+        <a href="${resetUrl}" style="display:inline-block;background:#b8956a;color:#fff;padding:12px 24px;border-radius:6px;text-decoration:none;margin-top:16px;">Сбросить пароль</a>
+        <p style="margin-top:24px;font-size:13px;color:#666;">Если вы не запрашивали восстановление пароля, просто проигнорируйте это письмо.</p>
+      `),
+    );
+  }
+
   /** Grace period warning */
   async sendGracePeriodWarning(userId: string, retriesLeft: number): Promise<void> {
     const user = await prisma.user.findUnique({ where: { id: userId }, select: { email: true } });

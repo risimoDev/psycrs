@@ -18,6 +18,15 @@ const refreshSchema = z.object({
   refreshToken: z.string().min(1),
 });
 
+const forgotPasswordSchema = z.object({
+  email: z.string().email(),
+});
+
+const resetPasswordSchema = z.object({
+  token: z.string().min(1),
+  password: z.string().min(8, 'Password must be at least 8 characters'),
+});
+
 export class AuthController {
   async register(request: FastifyRequest, reply: FastifyReply) {
     const parsed = registerSchema.safeParse(request.body);
@@ -76,6 +85,26 @@ export class AuthController {
   async me(request: FastifyRequest, reply: FastifyReply) {
     const user = await authService.getUser(request.userId);
     return reply.send(user);
+  }
+
+  async forgotPassword(request: FastifyRequest, reply: FastifyReply) {
+    const parsed = forgotPasswordSchema.safeParse(request.body);
+    if (!parsed.success) {
+      throw new ValidationError(parsed.error.issues[0]?.message ?? 'Validation failed');
+    }
+
+    await authService.forgotPassword(parsed.data.email);
+    return reply.send({ message: 'Если указанный email зарегистрирован, инструкции по восстановлению пароля отправлены' });
+  }
+
+  async resetPassword(request: FastifyRequest, reply: FastifyReply) {
+    const parsed = resetPasswordSchema.safeParse(request.body);
+    if (!parsed.success) {
+      throw new ValidationError(parsed.error.issues[0]?.message ?? 'Validation failed');
+    }
+
+    await authService.resetPassword(parsed.data.token, parsed.data.password);
+    return reply.send({ message: 'Пароль успешно изменён' });
   }
 }
 

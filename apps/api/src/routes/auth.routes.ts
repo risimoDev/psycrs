@@ -8,4 +8,6 @@ export async function authRoutes(app: FastifyInstance) {
   app.post('/refresh', (req, reply) => authController.refresh(req, reply));
   app.post('/logout', (req, reply) => authController.logout(req, reply));
   app.get('/me', { preHandler: [requireAuth] }, (req, reply) => authController.me(req, reply));
+  app.post('/forgot-password', (req, reply) => authController.forgotPassword(req, reply));
+  app.post('/reset-password', (req, reply) => authController.resetPassword(req, reply));
 }

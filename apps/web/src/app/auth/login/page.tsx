@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useAuthStore } from '../../../lib/auth-store';
 import { Button } from '../../../components/button';
+import { BackButton } from '../../../components/back-button';
 
 export default function LoginPage() {
   const router = useRouter();
@@ -55,9 +56,10 @@ export default function LoginPage() {
       {/* Форма */}
       <div className="flex-1 flex items-center justify-center px-4 py-12">
         <div className="w-full max-w-sm">
-          <Link href="/" className="font-heading text-lg font-bold text-foreground mb-10 block">
+          <Link href="/" className="font-heading text-lg font-bold text-foreground mb-4 block">
             Psyho<span className="text-accent">Course</span>
           </Link>
+          <BackButton className="mb-6 -ml-2" />
 
           <h1 className="font-heading text-2xl font-bold text-foreground">
             Вход в аккаунт
@@ -87,9 +89,17 @@ export default function LoginPage() {
             </div>
 
             <div>
-              <label htmlFor="password" className="block text-[15px] text-foreground/70 mb-1.5">
-                Пароль
-              </label>
+              <div className="flex items-center justify-between mb-1.5">
+                <label htmlFor="password" className="block text-[15px] text-foreground/70">
+                  Пароль
+                </label>
+                <Link
+                  href="/auth/forgot-password"
+                  className="text-[13px] text-accent hover:text-accent/80 transition-colors"
+                >
+                  Забыли пароль?
+                </Link>
+              </div>
               <input
                 id="password"
                 type="password"

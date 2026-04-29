@@ -158,6 +158,18 @@ export const authApi = {
     }),
 
   me: () => request<UserProfile>('/auth/me'),
+
+  forgotPassword: (email: string) =>
+    request<{ message: string }>('/auth/forgot-password', {
+      method: 'POST',
+      body: { email },
+    }),
+
+  resetPassword: (token: string, password: string) =>
+    request<{ message: string }>('/auth/reset-password', {
+      method: 'POST',
+      body: { token, password },
+    }),
 };
 
 // ─── Subscription ──────────────────────────────────────

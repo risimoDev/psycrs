@@ -4,6 +4,7 @@ import jwt from 'jsonwebtoken';
 import { prisma } from '../lib/prisma.js';
 import { getEnv } from '../config/env.js';
 import { getLogger } from '../lib/logger.js';
+import { notificationService } from './notification.service.js';
 import {
   ConflictError,
   UnauthorizedError,
@@ -178,6 +179,57 @@ export class AuthService {
       where: { userId, revokedAt: null },
       data: { revokedAt: new Date() },
     });
+  }
+
+  /** Generate reset token and send email */
+  async forgotPassword(email: string): Promise<void> {
+    const user = await prisma.user.findUnique({ where: { email } });
+    if (!user) {
+      // Silently return — don't leak whether email exists
+      this.logger.info({ email }, 'Password reset requested for non-existent email');
+      return;
+    }
+
+    const token = randomBytes(32).toString('hex');
+    const expiresAt = new Date(Date.now() + 60 * 60 * 1000); // 1 hour
+
+    await prisma.user.update({
+      where: { id: user.id },
+      data: {
+        resetToken: token,
+        resetTokenExpiresAt: expiresAt,
+      },
+    });
+
+    await notificationService.sendPasswordReset(user.email, token);
+    this.logger.info({ userId: user.id }, 'Password reset token generated');
+  }
+
+  /** Reset password by token */
+  async resetPassword(token: string, newPassword: string): Promise<void> {
+    const user = await prisma.user.findUnique({
+      where: { resetToken: token },
+    });
+
+    if (!user || !user.resetTokenExpiresAt || user.resetTokenExpiresAt < new Date()) {
+      throw new UnauthorizedError('Недействительный или просроченный токен восстановления');
+    }
+
+    const passwordHash = await bcrypt.hash(newPassword, BCRYPT_ROUNDS);
+
+    await prisma.user.update({
+      where: { id: user.id },
+      data: {
+        passwordHash,
+        resetToken: null,
+        resetTokenExpiresAt: null,
+      },
+    });
+
+    // Revoke all existing sessions for security
+    await this.revokeAllUserTokens(user.id);
+
+    this.logger.info({ userId: user.id }, 'Password reset successfully');
   }
 }
 
