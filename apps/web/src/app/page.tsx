@@ -8,7 +8,7 @@ import {
   ArrowRightIcon,
   StarIcon,
 } from '@/components/icons';
-import { ReviewCarousel } from '@/components/review-carousel';
+import { ReviewSection } from '@/components/review-carousel';
 import { DynamicPricingSection } from '@/components/dynamic-pricing';
 
 export const metadata: Metadata = {
@@ -347,7 +347,7 @@ function TestimonialsSection() {
         <div className="accent-line mb-5" />
         <h2 className="text-2xl font-bold sm:text-3xl">Что говорят студенты</h2>
       </div>
-      <ReviewCarousel />
+      <ReviewSection />
     </section>
   );
 }

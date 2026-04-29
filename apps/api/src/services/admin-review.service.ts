@@ -1,6 +1,5 @@
 import { prisma } from '../lib/prisma.js';
 import { NotFoundError } from '../lib/errors.js';
-import { auditService } from './audit.service.js';
 import { getLogger } from '../lib/logger.js';
 import * as fs from 'node:fs';
 import * as path from 'node:path';
@@ -8,36 +7,19 @@ import { randomUUID } from 'node:crypto';
 import type { Readable } from 'node:stream';
 import { pipeline } from 'node:stream/promises';
 
-const UPLOAD_DIR = path.resolve(process.cwd(), 'storage', 'reviews');
+const GIFT_UPLOAD_DIR = path.resolve(process.cwd(), 'storage', 'gifts');
 
 interface ReviewListQuery {
   page: number;
   limit: number;
 }
 
-interface CreateReviewInput {
-  name: string;
-  role?: string;
-  text?: string;
-  order?: number;
-  isVisible?: boolean;
-}
-
-interface UpdateReviewInput {
-  name?: string;
-  role?: string;
-  text?: string;
-  order?: number;
-  isVisible?: boolean;
-}
-
 export class AdminReviewService {
   private readonly logger = getLogger().child({ service: 'admin-review' });
 
   constructor() {
-    // Ensure upload directory exists
-    if (!fs.existsSync(UPLOAD_DIR)) {
-      fs.mkdirSync(UPLOAD_DIR, { recursive: true });
+    if (!fs.existsSync(GIFT_UPLOAD_DIR)) {
+      fs.mkdirSync(GIFT_UPLOAD_DIR, { recursive: true });
     }
   }
 
@@ -45,132 +27,81 @@ export class AdminReviewService {
     const skip = (query.page - 1) * query.limit;
 
     const [items, total] = await Promise.all([
-      prisma.review.findMany({
-        orderBy: { order: 'asc' },
+      prisma.userReview.findMany({
+        include: { user: { select: { email: true } } },
+        orderBy: { createdAt: 'desc' },
         skip,
         take: query.limit,
       }),
-      prisma.review.count(),
+      prisma.userReview.count(),
     ]);
 
     return { items, total, page: query.page, limit: query.limit };
   }
 
-  async create(input: CreateReviewInput, adminId: string) {
-    const review = await prisma.review.create({
-      data: {
-        name: input.name,
-        role: input.role ?? null,
-        text: input.text ?? null,
-        order: input.order ?? 0,
-        isVisible: input.isVisible ?? true,
-      },
-    });
+  async approve(id: string) {
+    const review = await prisma.userReview.findUnique({ where: { id } });
+    if (!review) throw new NotFoundError('Review');
 
-    await auditService.log({
-      adminId,
-      action: 'create',
-      entity: 'review',
-      entityId: review.id,
-      details: { name: input.name },
-    });
-
-    return review;
-  }
-
-  async update(id: string, input: UpdateReviewInput, adminId: string) {
-    const existing = await prisma.review.findUnique({ where: { id } });
-    if (!existing) throw new NotFoundError('Review');
-
-    const review = await prisma.review.update({
+    const updated = await prisma.userReview.update({
       where: { id },
-      data: input,
+      data: { status: 'approved' },
     });
 
-    await auditService.log({
-      adminId,
-      action: 'update',
-      entity: 'review',
-      entityId: id,
-      details: JSON.parse(JSON.stringify(input)),
-    });
-
-    return review;
+    this.logger.info({ reviewId: id }, 'Review approved');
+    return updated;
   }
 
-  async uploadImage(id: string, fileStream: Readable, filename: string, adminId: string) {
-    const existing = await prisma.review.findUnique({ where: { id } });
-    if (!existing) throw new NotFoundError('Review');
+  async reject(id: string) {
+    const review = await prisma.userReview.findUnique({ where: { id } });
+    if (!review) throw new NotFoundError('Review');
 
-    // Delete old image if exists
-    if (existing.imageUrl) {
-      const oldPath = path.resolve(process.cwd(), 'storage', existing.imageUrl.replace(/^\/storage\//, ''));
-      if (fs.existsSync(oldPath)) {
-        fs.unlinkSync(oldPath);
-      }
-    }
+    const updated = await prisma.userReview.update({
+      where: { id },
+      data: { status: 'rejected' },
+    });
 
-    const ext = path.extname(filename).toLowerCase() || '.jpg';
+    this.logger.info({ reviewId: id }, 'Review rejected');
+    return updated;
+  }
+
+  async uploadGiftPdf(fileStream: Readable, filename: string) {
+    const ext = path.extname(filename).toLowerCase() || '.pdf';
+    if (ext !== '.pdf') throw new Error('Only PDF files allowed');
     const newFilename = `${randomUUID()}${ext}`;
-    const filePath = path.join(UPLOAD_DIR, newFilename);
+    const filePath = path.join(GIFT_UPLOAD_DIR, newFilename);
 
     await pipeline(fileStream, fs.createWriteStream(filePath));
 
-    const imageUrl = `/storage/reviews/${newFilename}`;
+    const pdfUrl = `/storage/gifts/${newFilename}`;
 
-    const review = await prisma.review.update({
-      where: { id },
-      data: { imageUrl },
+    await prisma.setting.upsert({
+      where: { key: 'gift_pdf_url' },
+      update: { value: pdfUrl },
+      create: { key: 'gift_pdf_url', value: pdfUrl },
     });
 
-    await auditService.log({
-      adminId,
-      action: 'upload_image',
-      entity: 'review',
-      entityId: id,
-      details: { imageUrl },
-    });
-
-    this.logger.info({ reviewId: id, imageUrl }, 'Review image uploaded');
-    return review;
+    this.logger.info({ pdfUrl }, 'Gift PDF uploaded');
+    return { pdfUrl };
   }
 
-  async delete(id: string, adminId: string) {
-    const existing = await prisma.review.findUnique({ where: { id } });
-    if (!existing) throw new NotFoundError('Review');
-
-    // Delete image file if exists
-    if (existing.imageUrl) {
-      const imgPath = path.resolve(process.cwd(), 'storage', existing.imageUrl.replace(/^\/storage\//, ''));
-      if (fs.existsSync(imgPath)) {
-        fs.unlinkSync(imgPath);
-      }
-    }
-
-    await prisma.review.delete({ where: { id } });
-
-    await auditService.log({
-      adminId,
-      action: 'delete',
-      entity: 'review',
-      entityId: id,
-      details: { name: existing.name },
+  async getGiftPdfUrl(): Promise<string | null> {
+    const setting = await prisma.setting.findUnique({
+      where: { key: 'gift_pdf_url' },
     });
+    return setting?.value ?? null;
   }
 
-  /** Public: get visible reviews for landing page */
-  async getPublicReviews() {
-    return prisma.review.findMany({
-      where: { isVisible: true },
-      orderBy: { order: 'asc' },
-      select: {
-        id: true,
-        name: true,
-        role: true,
-        text: true,
-        imageUrl: true,
-      },
+  async claimGift(reviewId: string) {
+    const review = await prisma.userReview.findUnique({ where: { id: reviewId } });
+    if (!review || review.status !== 'approved') throw new NotFoundError('Review');
+
+    const updated = await prisma.userReview.update({
+      where: { id: reviewId },
+      data: { giftClaimed: true },
     });
+
+    return updated;
   }
 }
 

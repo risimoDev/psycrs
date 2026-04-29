@@ -427,24 +427,31 @@ export interface RetentionData {
 
 export type SiteSettings = Record<string, string>;
 
-export interface AdminReview {
+export interface UserReview {
   id: string;
+  userId: string;
   name: string;
-  role: string | null;
-  text: string | null;
-  imageUrl: string | null;
-  order: number;
-  isVisible: boolean;
+  text: string;
+  rating: number;
+  status: 'pending' | 'approved' | 'rejected';
+  giftClaimed: boolean;
   createdAt: string;
   updatedAt: string;
+  user?: { email: string };
 }
 
 export interface PublicReview {
   id: string;
   name: string;
-  role: string | null;
-  text: string | null;
-  imageUrl: string | null;
+  text: string;
+  rating: number;
+  createdAt: string;
+}
+
+export interface MyReviewResponse {
+  review: UserReview | null;
+  giftAvailable: boolean;
+  giftPdfUrl: string | null;
 }
 
 export interface AdminTariff {
@@ -607,51 +614,31 @@ export const adminApi = {
   setUserRole: (userId: string, role: 'admin' | 'user') =>
     request<AdminUser>(`/admin/users/${userId}/role`, { method: 'POST', body: { role } }),
 
-  // Reviews
+  // Reviews moderation
   reviews: (page = 1, limit = 50) =>
-    request<PaginatedResponse<AdminReview>>(`/admin/reviews?page=${page}&limit=${limit}`),
-  createReview: (data: { name: string; role?: string; text?: string; order?: number; isVisible?: boolean }) =>
-    request<AdminReview>('/admin/reviews', { method: 'POST', body: data }),
-  updateReview: (id: string, data: { name?: string; role?: string; text?: string; order?: number; isVisible?: boolean }) =>
-    request<AdminReview>(`/admin/reviews/${id}`, { method: 'PATCH', body: data }),
-  uploadReviewImage: async (id: string, file: File): Promise<AdminReview> => {
+    request<PaginatedResponse<UserReview>>(`/admin/reviews?page=${page}&limit=${limit}`),
+  approveReview: (id: string) =>
+    request<UserReview>(`/admin/reviews/${id}/approve`, { method: 'PATCH' }),
+  rejectReview: (id: string) =>
+    request<UserReview>(`/admin/reviews/${id}/reject`, { method: 'PATCH' }),
+  uploadGiftPdf: async (file: File): Promise<{ pdfUrl: string }> => {
     const formData = new FormData();
     formData.append('file', file);
 
     const headers: Record<string, string> = {};
-    if (accessToken) {
-      headers['Authorization'] = `Bearer ${accessToken}`;
-    }
+    if (accessToken) headers['Authorization'] = `Bearer ${accessToken}`;
 
-    let res = await fetch(`${API_BASE}/admin/reviews/${id}/image`, {
+    const res = await fetch(`${API_BASE}/admin/gift-pdf`, {
       method: 'POST',
       headers,
       body: formData,
     });
-
-    if (res.status === 401) {
-      const refreshed = await refreshOnce();
-      if (refreshed && accessToken) {
-        headers['Authorization'] = `Bearer ${accessToken}`;
-        const retryForm = new FormData();
-        retryForm.append('file', file);
-        res = await fetch(`${API_BASE}/admin/reviews/${id}/image`, {
-          method: 'POST',
-          headers,
-          body: retryForm,
-        });
-      }
-    }
-
     if (!res.ok) {
-      const data = await res.json();
-      throw new ApiError(res.status, data.message ?? 'Upload failed');
+      const data = await res.json().catch(() => ({}));
+      throw new ApiError(res.status, (data as { message?: string }).message ?? 'Upload failed');
     }
-
     return res.json();
   },
-  deleteReview: (id: string) =>
-    request<void>(`/admin/reviews/${id}`, { method: 'DELETE' }),
 
   // Tariffs
   tariffs: (page = 1, limit = 50) =>
@@ -735,7 +722,11 @@ export const settingsApi = {
 };
 
 export const reviewsApi = {
-  getAll: () => request<PublicReview[]>('/reviews'),
+  getPublic: () => request<PublicReview[]>('/reviews'),
+  create: (data: { name: string; text: string; rating?: number }) =>
+    request<UserReview>('/reviews', { method: 'POST', body: data }),
+  getMy: () => request<MyReviewResponse>('/reviews/my'),
+  claimGift: () => request<{ giftPdfUrl: string }>('/reviews/claim-gift', { method: 'POST' }),
 };
 
 export const tariffApi = {

@@ -60,22 +60,6 @@ const subListSchema = paginationSchema.extend({
   status: z.enum(['active', 'grace_period', 'expired', 'cancelled']).optional(),
 });
 
-const createReviewSchema = z.object({
-  name: z.string().min(1).max(100),
-  role: z.string().max(100).optional(),
-  text: z.string().max(2000).optional(),
-  order: z.number().int().min(0).optional(),
-  isVisible: z.boolean().optional(),
-});
-
-const updateReviewSchema = z.object({
-  name: z.string().min(1).max(100).optional(),
-  role: z.string().max(100).optional(),
-  text: z.string().max(2000).optional(),
-  order: z.number().int().min(0).optional(),
-  isVisible: z.boolean().optional(),
-});
-
 const grantSubscriptionSchema = z.object({
   days: z.number().int().min(1).max(3650).default(30),
 });
@@ -264,45 +248,28 @@ export class AdminController {
     return reply.send(result);
   }
 
-  async createReview(request: FastifyRequest, reply: FastifyReply) {
-    const parsed = createReviewSchema.safeParse(request.body);
-    if (!parsed.success) {
-      throw new ValidationError(parsed.error.issues[0]?.message ?? 'Validation failed');
-    }
-    const review = await adminReviewService.create(parsed.data, request.userId);
-    return reply.status(201).send(review);
-  }
-
-  async updateReview(request: FastifyRequest, reply: FastifyReply) {
+  async approveReview(request: FastifyRequest, reply: FastifyReply) {
     const { id } = idParamSchema.parse(request.params);
-    const parsed = updateReviewSchema.safeParse(request.body);
-    if (!parsed.success) {
-      throw new ValidationError(parsed.error.issues[0]?.message ?? 'Validation failed');
-    }
-    const review = await adminReviewService.update(id, parsed.data, request.userId);
+    const review = await adminReviewService.approve(id);
     return reply.send(review);
   }
 
-  async uploadReviewImage(request: FastifyRequest, reply: FastifyReply) {
+  async rejectReview(request: FastifyRequest, reply: FastifyReply) {
     const { id } = idParamSchema.parse(request.params);
+    const review = await adminReviewService.reject(id);
+    return reply.send(review);
+  }
+
+  async uploadGiftPdf(request: FastifyRequest, reply: FastifyReply) {
     const file = await request.file();
     if (!file) {
       throw new ValidationError('No file uploaded');
     }
-
-    const allowedMimes = ['image/jpeg', 'image/png', 'image/webp', 'image/gif'];
-    if (!allowedMimes.includes(file.mimetype)) {
-      throw new ValidationError('Only jpeg, png, webp, gif images are allowed');
+    if (file.mimetype !== 'application/pdf' && !file.filename.toLowerCase().endsWith('.pdf')) {
+      throw new ValidationError('Only PDF files are allowed');
     }
-
-    const review = await adminReviewService.uploadImage(id, file.file, file.filename, request.userId);
-    return reply.send(review);
-  }
-
-  async deleteReview(request: FastifyRequest, reply: FastifyReply) {
-    const { id } = idParamSchema.parse(request.params);
-    await adminReviewService.delete(id, request.userId);
-    return reply.status(204).send();
+    const result = await adminReviewService.uploadGiftPdf(file.file, file.filename);
+    return reply.send(result);
   }
 
   // ── User Management (ban/unban) ─────────────────────

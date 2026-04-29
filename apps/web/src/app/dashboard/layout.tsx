@@ -38,7 +38,7 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     if (!isLoading && !isAuthenticated) {
-      router.push('/auth/login?next=/dashboard');
+      router.replace('/auth/login?next=/dashboard');
     }
   }, [isLoading, isAuthenticated, router]);
 

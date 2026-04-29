@@ -40,6 +40,12 @@ enum ContentType {
     article_pdf
 }
 
+enum ReviewStatus {
+    pending
+    approved
+    rejected
+}
+
 // ─── Models ──────────────────────────────────────────────
 
 model User {
@@ -63,6 +69,7 @@ model User {
     auditLogs       AuditLog[]
     progress        Progress[]
     videoAccessLogs VideoAccessLog[]
+    userReviews     UserReview[]
 
     @@index([role])
     @@map("users")
@@ -270,19 +277,22 @@ model Progress {
     @@map("progress")
 }
 
-model Review {
-    id        String   @id @default(uuid()) @db.Uuid
-    name      String
-    role      String?
-    text      String?
-    imageUrl  String?  @map("image_url")
-    order     Int      @default(0)
-    isVisible Boolean  @default(true) @map("is_visible")
-    createdAt DateTime @default(now()) @map("created_at")
-    updatedAt DateTime @updatedAt @map("updated_at")
+model UserReview {
+    id          String       @id @default(uuid()) @db.Uuid
+    userId      String       @map("user_id") @db.Uuid
+    name        String
+    text        String
+    rating      Int          @default(5)
+    status      ReviewStatus @default(pending)
+    giftClaimed Boolean      @default(false) @map("gift_claimed")
+    createdAt   DateTime     @default(now()) @map("created_at")
+    updatedAt   DateTime     @updatedAt @map("updated_at")
 
-    @@index([order])
-    @@map("reviews")
+    user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+    @@index([status])
+    @@index([userId])
+    @@map("user_reviews")
 }
 
 model VideoAccessLog {

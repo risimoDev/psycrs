@@ -4,7 +4,7 @@ import { useState } from 'react';
 import type React from 'react';
 import Link from 'next/link';
 import { useQuery } from '@tanstack/react-query';
-import { subscriptionApi, contentApi, type ContentItem, type ContentType, API_BASE } from '../../lib/api';
+import { subscriptionApi, contentApi, reviewsApi, type ContentItem, type ContentType, API_BASE } from '../../lib/api';
 import { Button } from '../../components/button';
 import { CheckIcon } from '../../components/icons';
 import { LessonPlaceholder } from '../../components/lesson-placeholder';
@@ -180,6 +180,48 @@ function ContentGrid({ type }: { type: TabId }) {
   );
 }
 
+// ─── Gift block for approved reviews ─────────────────────
+
+function GiftBlock() {
+  const { data, isLoading } = useQuery({
+    queryKey: ['myReview'],
+    queryFn: () => reviewsApi.getMy(),
+  });
+  const [claiming, setClaiming] = useState(false);
+  const [claimed, setClaimed] = useState(false);
+
+  if (isLoading || !data?.review || data.review.status !== 'approved') return null;
+  if (data.review.giftClaimed || claimed) return null;
+  if (!data.giftAvailable || !data.giftPdfUrl) return null;
+
+  const handleClaim = async () => {
+    setClaiming(true);
+    try {
+      const result = await reviewsApi.claimGift();
+      setClaimed(true);
+      if (result.giftPdfUrl) {
+        window.open(`${API_BASE}${result.giftPdfUrl}`, '_blank');
+      }
+    } catch (err) {
+      alert(err instanceof Error ? err.message : 'Ошибка получения подарка');
+    } finally {
+      setClaiming(false);
+    }
+  };
+
+  return (
+    <div className="mb-6 p-5 rounded-2xl border border-accent/20 bg-accent/[0.04] flex flex-col sm:flex-row items-start sm:items-center gap-4">
+      <div className="flex-1">
+        <p className="font-heading font-semibold text-foreground mb-1">Ваш отзыв одобрен!</p>
+        <p className="text-sm text-muted">В благодарность мы дарим вам рабочую тетрадь по тревожности. Нажмите кнопку ниже, чтобы скачать подарок.</p>
+      </div>
+      <Button onClick={handleClaim} disabled={claiming} className="shrink-0">
+        {claiming ? 'Загрузка...' : 'Забрать подарок'}
+      </Button>
+    </div>
+  );
+}
+
 // ─── No-subscription state ────────────────────────────────
 
 function NoSubscription() {
@@ -265,6 +307,7 @@ export default function DashboardPage() {
       {/* Content with active subscription */}
       {!isLoading && hasAccess && (
         <>
+          <GiftBlock />
           {/* Tabs */}
           <div className="flex gap-1 mb-6 p-1 bg-foreground/[0.04] rounded-xl w-fit">
             {TABS.map((tab) => (

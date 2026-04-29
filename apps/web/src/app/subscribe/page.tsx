@@ -129,7 +129,7 @@ export default function SubscribePage() {
   }
 
   if (!isAuthenticated) {
-    router.push('/auth/login');
+    router.replace('/auth/login');
     return null;
   }
 

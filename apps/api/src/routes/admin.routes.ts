@@ -43,10 +43,9 @@ export async function adminRoutes(app: FastifyInstance) {
 
   // ── Reviews ───────────────────────────────────────
   app.get('/reviews', (req, reply) => adminController.listReviews(req, reply));
-  app.post('/reviews', (req, reply) => adminController.createReview(req, reply));
-  app.patch('/reviews/:id', (req, reply) => adminController.updateReview(req, reply));
-  app.post('/reviews/:id/image', (req, reply) => adminController.uploadReviewImage(req, reply));
-  app.delete('/reviews/:id', (req, reply) => adminController.deleteReview(req, reply));
+  app.patch('/reviews/:id/approve', (req, reply) => adminController.approveReview(req, reply));
+  app.patch('/reviews/:id/reject', (req, reply) => adminController.rejectReview(req, reply));
+  app.post('/gift-pdf', (req, reply) => adminController.uploadGiftPdf(req, reply));
 
   // ── Tariffs ───────────────────────────────────────
   app.get('/tariffs', (req, reply) => adminController.listTariffs(req, reply));

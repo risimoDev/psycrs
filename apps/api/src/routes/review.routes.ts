@@ -1,10 +1,13 @@
 import type { FastifyInstance } from 'fastify';
-import { adminReviewService } from '../services/admin-review.service.js';
+import { reviewController } from '../controllers/review.controller.js';
+import { requireAuth } from '../middleware/auth.middleware.js';
 
 export async function reviewRoutes(app: FastifyInstance) {
-  // Public route — visible reviews for the landing page
-  app.get('/', async (_request, reply) => {
-    const reviews = await adminReviewService.getPublicReviews();
-    return reply.send(reviews);
-  });
+  // Public — approved reviews for landing page carousel
+  app.get('/', (req, reply) => reviewController.listPublic(req, reply));
+
+  // Authenticated — create review, get my review status, claim gift
+  app.post('/', { preHandler: [requireAuth] }, (req, reply) => reviewController.create(req, reply));
+  app.get('/my', { preHandler: [requireAuth] }, (req, reply) => reviewController.getMyReview(req, reply));
+  app.post('/claim-gift', { preHandler: [requireAuth] }, (req, reply) => reviewController.claimGift(req, reply));
 }
