@@ -63,8 +63,9 @@ export async function buildApp(): Promise<FastifyInstance> {
 
   // ─── Error handler ────────────────────────────────
   app.setErrorHandler((error, request, reply) => {
-    if (error instanceof ZodError) {
-      return reply.status(400).send({ message: error.issues[0]?.message ?? 'Validation error' });
+    if (error instanceof ZodError || error?.name === 'ZodError') {
+      const issues = (error as unknown as ZodError).issues ?? (error as unknown as { issues?: { message: string }[] }).issues;
+      return reply.status(400).send({ message: issues?.[0]?.message ?? 'Validation error' });
     }
 
     if (error instanceof AppError) {
@@ -81,7 +82,8 @@ export async function buildApp(): Promise<FastifyInstance> {
     }
 
     logger.error({ err: error, url: request.url }, 'Unhandled error');
-    return reply.status(500).send({ message: 'Internal server error' });
+    const msg = error instanceof Error ? error.message : 'Internal server error';
+    return reply.status(500).send({ message: msg });
   });
 
   // ─── Static file serving (review images, etc.) ───────────
