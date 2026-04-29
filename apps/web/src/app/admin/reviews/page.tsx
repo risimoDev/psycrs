@@ -29,7 +29,7 @@ export default function ReviewsPage() {
 
   const { data, isLoading } = useQuery({
     queryKey: ['admin', 'reviews'],
-    queryFn: () => adminApi.reviews(1, 500),
+    queryFn: () => adminApi.reviews(1, 100),
   });
 
   const approveMut = useMutation({
