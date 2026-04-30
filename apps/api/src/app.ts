@@ -14,6 +14,7 @@ import { adminRoutes } from './routes/admin.routes.js';
 import { paymentRoutes } from './routes/payment.routes.js';
 import { progressRoutes } from './routes/progress.routes.js';
 import { reviewRoutes } from './routes/review.routes.js';
+import { promoRoutes } from './routes/promo.routes.js';
 import { settingsRoutes } from './routes/settings.routes.js';
 import { subscriptionRoutes } from './routes/subscription.routes.js';
 import { tariffRoutes } from './routes/tariff.routes.js';
@@ -110,6 +111,7 @@ export async function buildApp(): Promise<FastifyInstance> {
   await app.register(paymentRoutes, { prefix: '/payment' });
   await app.register(subscriptionRoutes, { prefix: '/subscription' });
   await app.register(reviewRoutes, { prefix: '/reviews' });
+  await app.register(promoRoutes, { prefix: '/promo' });
   await app.register(tariffRoutes, { prefix: '/tariffs' });
   await app.register(settingsRoutes, { prefix: '/settings' });
   await app.register(adminRoutes, { prefix: '/admin' });

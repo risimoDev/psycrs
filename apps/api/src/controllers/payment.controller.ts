@@ -4,9 +4,10 @@ import { ValidationError } from '../lib/errors.js';
 
 export class PaymentController {
   async create(request: FastifyRequest, reply: FastifyReply) {
-    const body = request.body as { tariffId?: string } | null;
+    const body = request.body as { tariffId?: string; promoCode?: string } | null;
     const tariffId = typeof body?.tariffId === 'string' ? body.tariffId : undefined;
-    const result = await paymentService.startSubscription(request.userId, tariffId);
+    const promoCode = typeof body?.promoCode === 'string' && body.promoCode.trim() ? body.promoCode.trim() : undefined;
+    const result = await paymentService.startSubscription(request.userId, tariffId, promoCode);
     return reply.send(result);
   }
 

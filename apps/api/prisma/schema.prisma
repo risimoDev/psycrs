@@ -46,6 +46,12 @@ enum ReviewStatus {
     rejected
 }
 
+enum PromoCodeType {
+    fixed
+    percent
+    trial
+}
+
 // ─── Models ──────────────────────────────────────────────
 
 model User {
@@ -76,20 +82,24 @@ model User {
 }
 
 model Subscription {
-    id               String             @id @default(uuid()) @db.Uuid
-    userId           String             @unique @map("user_id") @db.Uuid
-    status           SubscriptionStatus @default(active)
-    currentPeriodEnd DateTime           @map("current_period_end")
-    retryCount       Int                @default(0) @map("retry_count")
-    nextRetryAt      DateTime?          @map("next_retry_at")
-    createdAt        DateTime           @default(now()) @map("created_at")
-    updatedAt        DateTime           @updatedAt @map("updated_at")
+    id                   String             @id @default(uuid()) @db.Uuid
+    userId               String             @unique @map("user_id") @db.Uuid
+    status               SubscriptionStatus @default(active)
+    currentPeriodEnd     DateTime           @map("current_period_end")
+    isTrial              Boolean            @default(false) @map("is_trial")
+    trialEndsAt          DateTime?          @map("trial_ends_at")
+    savedPaymentMethodId String?            @map("saved_payment_method_id")
+    retryCount           Int                @default(0) @map("retry_count")
+    nextRetryAt          DateTime?          @map("next_retry_at")
+    createdAt            DateTime           @default(now()) @map("created_at")
+    updatedAt            DateTime           @updatedAt @map("updated_at")
 
     user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
     @@index([status])
     @@index([currentPeriodEnd])
     @@index([nextRetryAt])
+    @@index([trialEndsAt])
     @@map("subscriptions")
 }
 
@@ -99,16 +109,20 @@ model Payment {
     externalId      String?       @unique @map("external_id")
     idempotenceKey  String        @unique @map("idempotence_key")
     amount          Decimal       @db.Decimal(10, 2)
+    originalAmount  Decimal?      @map("original_amount") @db.Decimal(10, 2)
     currency        String        @default("RUB") @db.VarChar(3)
     status          PaymentStatus @default(pending)
     description     String?
     confirmationUrl String?       @map("confirmation_url")
+    isTrial         Boolean       @default(false) @map("is_trial")
     tariffId        String?       @map("tariff_id") @db.Uuid
+    promoCodeId     String?       @map("promo_code_id") @db.Uuid
     createdAt       DateTime      @default(now()) @map("created_at")
     updatedAt       DateTime      @updatedAt @map("updated_at")
 
-    user   User    @relation(fields: [userId], references: [id], onDelete: Cascade)
-    tariff Tariff? @relation(fields: [tariffId], references: [id], onDelete: SetNull)
+    user      User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+    tariff    Tariff?    @relation(fields: [tariffId], references: [id], onDelete: SetNull)
+    promoCode PromoCode? @relation(fields: [promoCodeId], references: [id], onDelete: SetNull)
 
     @@index([userId])
     @@index([status])
@@ -310,6 +324,25 @@ model VideoAccessLog {
     @@index([videoId])
     @@index([createdAt])
     @@map("video_access_logs")
+}
+
+model PromoCode {
+    id        String        @id @default(uuid()) @db.Uuid
+    code      String        @unique
+    type      PromoCodeType
+    value     Int // fixed: discount in kopecks; percent: 1-100; trial: trial days
+    maxUses   Int?          @map("max_uses") // null = unlimited
+    usedCount Int           @default(0) @map("used_count")
+    expiresAt DateTime?     @map("expires_at")
+    isActive  Boolean       @default(true) @map("is_active")
+    createdAt DateTime      @default(now()) @map("created_at")
+    updatedAt DateTime      @updatedAt @map("updated_at")
+
+    payments Payment[]
+
+    @@index([code])
+    @@index([isActive])
+    @@map("promo_codes")
 }
 
 model Tariff {

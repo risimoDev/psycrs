@@ -57,4 +57,10 @@ export async function adminRoutes(app: FastifyInstance) {
   app.get('/articles', (req, reply) => adminController.listArticles(req, reply));
   app.post('/articles/upload', (req, reply) => adminController.uploadArticle(req, reply));
   app.delete('/articles/:id', (req, reply) => adminController.deleteArticle(req, reply));
+
+  // ── Promo Codes ───────────────────────────────────
+  app.get('/promo-codes', (req, reply) => adminController.listPromoCodes(req, reply));
+  app.post('/promo-codes', (req, reply) => adminController.createPromoCode(req, reply));
+  app.patch('/promo-codes/:id', (req, reply) => adminController.updatePromoCode(req, reply));
+  app.delete('/promo-codes/:id', (req, reply) => adminController.deletePromoCode(req, reply));
 }

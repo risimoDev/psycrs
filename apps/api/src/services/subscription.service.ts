@@ -17,8 +17,8 @@ export class SubscriptionService {
   private readonly logger = getLogger().child({ service: 'subscription' });
 
   /** Activate or extend subscription after successful payment */
-  async activateSubscription(userId: string, tariff?: { period: string }): Promise<void> {
-    const days = tariff ? periodToDays(tariff.period) : SUBSCRIPTION_PERIOD_DAYS;
+  async activateSubscription(userId: string, tariff?: { period: string }, isTrial = false, trialDays?: number): Promise<void> {
+    const days = isTrial && trialDays ? trialDays : (tariff ? periodToDays(tariff.period) : SUBSCRIPTION_PERIOD_DAYS);
     const now = new Date();
     const periodEnd = new Date(now.getTime() + days * 24 * 60 * 60 * 1000);
 
@@ -37,20 +37,24 @@ export class SubscriptionService {
           data: {
             status: 'active',
             currentPeriodEnd: newEnd,
+            isTrial,
+            trialEndsAt: isTrial ? periodEnd : null,
             retryCount: 0,
             nextRetryAt: null,
           },
         });
-        this.logger.info({ userId, periodEnd: newEnd }, 'Subscription extended');
+        this.logger.info({ userId, periodEnd: newEnd, isTrial }, 'Subscription extended');
       } else {
         await tx.subscription.create({
           data: {
             userId,
             status: 'active',
             currentPeriodEnd: periodEnd,
+            isTrial,
+            trialEndsAt: isTrial ? periodEnd : null,
           },
         });
-        this.logger.info({ userId, periodEnd }, 'Subscription created');
+        this.logger.info({ userId, periodEnd, isTrial }, 'Subscription created');
       }
     });
   }

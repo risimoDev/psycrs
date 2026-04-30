@@ -6,6 +6,7 @@ import {
   type IPaymentProvider,
 } from '../providers/payment/index.js';
 import { subscriptionService } from './subscription.service.js';
+import { promoService } from './promo.service.js';
 
 interface CreatePaymentResult {
   paymentId: string;
@@ -30,29 +31,43 @@ export class PaymentService {
   }
 
   /** Start subscription payment flow */
-  async startSubscription(userId: string, tariffId?: string): Promise<CreatePaymentResult> {
+  async startSubscription(userId: string, tariffId?: string, promoCode?: string): Promise<CreatePaymentResult> {
     const env = getEnv();
 
     // Look up tariff if provided
-    let amount = env.SUBSCRIPTION_PRICE;
+    let priceInKopecks = Math.round(env.SUBSCRIPTION_PRICE * 100);
     let description = 'Подписка на курс — 30 дней';
     let resolvedTariffId: string | undefined;
 
     if (tariffId) {
       const tariff = await prisma.tariff.findUnique({ where: { id: tariffId, isActive: true } });
       if (tariff) {
-        // Price stored in kopecks → convert to rubles for YooKassa
-        amount = tariff.price / 100;
+        priceInKopecks = tariff.price;
         description = `${tariff.title} — ${tariff.period === 'year' ? '365 дней' : tariff.period === 'lifetime' ? 'навсегда' : '30 дней'}`;
         resolvedTariffId = tariff.id;
       }
     }
 
-    const idempotenceKey = `sub_${userId}_${resolvedTariffId ?? 'default'}_${Date.now()}`;
+    // Apply promo code if provided
+    let isTrial = false;
+    let promoCodeId: string | undefined;
+    let finalAmountInKopecks = priceInKopecks;
 
-    // Prevent duplicate pending payments for the same tariff
+    if (promoCode) {
+      const promoResult = await promoService.validate(promoCode, priceInKopecks);
+      finalAmountInKopecks = promoResult.finalAmount;
+      promoCodeId = promoResult.promoCodeId;
+      isTrial = promoResult.type === 'trial';
+    }
+
+    // Convert kopecks to rubles for YooKassa
+    const amount = finalAmountInKopecks / 100;
+
+    const idempotenceKey = `sub_${userId}_${resolvedTariffId ?? 'default'}_${promoCodeId ?? 'nopromo'}_${Date.now()}`;
+
+    // Prevent duplicate pending payments for the same tariff + promo
     const pendingPayment = await prisma.payment.findFirst({
-      where: { userId, status: 'pending', tariffId: resolvedTariffId ?? null },
+      where: { userId, status: 'pending', tariffId: resolvedTariffId ?? null, promoCodeId: promoCodeId ?? null },
       orderBy: { createdAt: 'desc' },
     });
 
@@ -70,10 +85,13 @@ export class PaymentService {
         userId,
         idempotenceKey,
         amount,
+        originalAmount: priceInKopecks !== finalAmountInKopecks ? priceInKopecks / 100 : null,
         currency: 'RUB',
         description,
         status: 'pending',
+        isTrial,
         tariffId: resolvedTariffId ?? null,
+        promoCodeId: promoCodeId ?? null,
       },
     });
 
@@ -83,10 +101,11 @@ export class PaymentService {
         userId,
         amount,
         currency: 'RUB',
-        description,
+        description: isTrial ? `Тестовый доступ — ${description}` : description,
         idempotenceKey,
         returnUrl: env.PAYMENT_RETURN_URL,
-        metadata: { userId, internalPaymentId: localPayment.id },
+        metadata: { userId, internalPaymentId: localPayment.id, isTrial: String(isTrial) },
+        savePaymentMethod: isTrial,
       });
 
       // Update local record with external ID
@@ -99,7 +118,7 @@ export class PaymentService {
       });
 
       this.logger.info(
-        { userId, paymentId: localPayment.id, externalId: result.externalId },
+        { userId, paymentId: localPayment.id, externalId: result.externalId, isTrial },
         'Payment created',
       );
 
@@ -169,13 +188,34 @@ export class PaymentService {
 
       // 4. Process by event type
       switch (event.type) {
-        case 'payment.succeeded':
-          await subscriptionService.activateSubscription(payment.userId, payment.tariff ?? undefined);
+        case 'payment.succeeded': {
+          // Save payment method for trial subscriptions (for auto-charge after trial)
+          if (payment.isTrial && event.paymentMethodId) {
+            await tx.subscription.upsert({
+              where: { userId: payment.userId },
+              update: { savedPaymentMethodId: event.paymentMethodId },
+              create: {
+                userId: payment.userId,
+                status: 'active',
+                currentPeriodEnd: new Date(), // will be overwritten by activateSubscription
+                savedPaymentMethodId: event.paymentMethodId,
+              },
+            });
+          }
+
+          await subscriptionService.activateSubscription(payment.userId, payment.tariff ?? undefined, payment.isTrial);
+
+          // Increment promo code usage
+          if (payment.promoCodeId) {
+            await promoService.incrementUsage(payment.promoCodeId);
+          }
+
           this.logger.info(
-            { userId: payment.userId, paymentId: payment.id },
+            { userId: payment.userId, paymentId: payment.id, isTrial: payment.isTrial },
             'Payment succeeded — subscription activated',
           );
           break;
+        }
 
         case 'payment.canceled':
           await subscriptionService.moveToGracePeriod(payment.userId);

@@ -19,6 +19,7 @@ export interface CreatePaymentParams {
   idempotenceKey: string;
   returnUrl: string;
   metadata?: Record<string, string>;
+  savePaymentMethod?: boolean;
 }
 
 export interface CreatePaymentResult {
@@ -34,6 +35,7 @@ export interface WebhookEvent {
   amount: number;
   currency: string;
   status: 'pending' | 'succeeded' | 'canceled';
+  paymentMethodId?: string;
 }
 
 export interface IPaymentProvider {
@@ -83,6 +85,7 @@ class YooKassaProvider implements IPaymentProvider {
       description: params.description,
       metadata: params.metadata ?? {},
       capture: true,
+      ...(params.savePaymentMethod && { save_payment_method: true }),
     };
 
     const res = await fetch(`${YOOKASSA_API}/payments`, {
@@ -172,6 +175,8 @@ class YooKassaProvider implements IPaymentProvider {
         status = 'pending';
     }
 
+    const paymentMethod = obj['payment_method'] as { id?: string } | undefined;
+
     return {
       eventId: `${obj['id'] as string}_${type}`,
       type,
@@ -179,6 +184,7 @@ class YooKassaProvider implements IPaymentProvider {
       amount: amountValue,
       currency,
       status,
+      paymentMethodId: paymentMethod?.id,
     };
   }
 }

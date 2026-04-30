@@ -191,8 +191,8 @@ export interface PaymentResult {
 }
 
 export const paymentApi = {
-  create: (tariffId: string) =>
-    request<PaymentResult>('/payment/create', { method: 'POST', body: { tariffId } }),
+  create: (tariffId: string, promoCode?: string) =>
+    request<PaymentResult>('/payment/create', { method: 'POST', body: { tariffId, promoCode } }),
 };
 
 // ─── Video / Lessons ───────────────────────────────────
@@ -713,6 +713,28 @@ export const adminApi = {
 
   deleteArticle: (id: string) =>
     request<void>(`/admin/articles/${id}`, { method: 'DELETE' }),
+
+  // Promo Codes
+  promoCodes: (page = 1, limit = 50) =>
+    request<PaginatedResponse<PromoCode>>(`/admin/promo-codes?page=${page}&limit=${limit}`),
+  createPromoCode: (data: {
+    code: string;
+    type: 'fixed' | 'percent' | 'trial';
+    value: number;
+    maxUses?: number | null;
+    expiresAt?: string | null;
+    isActive?: boolean;
+  }) =>
+    request<PromoCode>('/admin/promo-codes', { method: 'POST', body: data }),
+  updatePromoCode: (id: string, data: {
+    value?: number;
+    maxUses?: number | null;
+    expiresAt?: string | null;
+    isActive?: boolean;
+  }) =>
+    request<PromoCode>(`/admin/promo-codes/${id}`, { method: 'PATCH', body: data }),
+  deletePromoCode: (id: string) =>
+    request<void>(`/admin/promo-codes/${id}`, { method: 'DELETE' }),
 };
 
 // ─── Public Settings ───────────────────────────────────
@@ -731,4 +753,34 @@ export const reviewsApi = {
 
 export const tariffApi = {
   getAll: () => request<PublicTariff[]>('/tariffs'),
+};
+
+// ─── Promo ─────────────────────────────────────────────
+
+export interface PromoValidationResult {
+  valid: true;
+  promoCodeId: string;
+  type: 'fixed' | 'percent' | 'trial';
+  value: number;
+  discountAmount: number;
+  finalAmount: number;
+  trialDays?: number;
+}
+
+export interface PromoCode {
+  id: string;
+  code: string;
+  type: 'fixed' | 'percent' | 'trial';
+  value: number;
+  maxUses: number | null;
+  usedCount: number;
+  expiresAt: string | null;
+  isActive: boolean;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export const promoApi = {
+  validate: (code: string, price: number) =>
+    request<PromoValidationResult>('/promo/validate', { method: 'POST', body: { code, price } }),
 };

@@ -8,6 +8,7 @@ import { adminVideoService } from '../services/admin-video.service.js';
 import { adminArticleService } from '../services/admin-article.service.js';
 import { adminReviewService } from '../services/admin-review.service.js';
 import { adminTariffService } from '../services/admin-tariff.service.js';
+import { promoService } from '../services/promo.service.js';
 import { settingsService } from '../services/settings.service.js';
 import { ValidationError } from '../lib/errors.js';
 
@@ -361,6 +362,60 @@ export class AdminController {
   async deleteArticle(request: FastifyRequest, reply: FastifyReply) {
     const { id } = idParamSchema.parse(request.params);
     await adminArticleService.delete(id, request.userId);
+    return reply.status(204).send();
+  }
+
+  // ── Promo Codes ─────────────────────────────────────
+
+  private readonly createPromoSchema = z.object({
+    code: z.string().min(1).max(50),
+    type: z.enum(['fixed', 'percent', 'trial']),
+    value: z.number().int().min(1),
+    maxUses: z.number().int().min(1).nullable().optional(),
+    expiresAt: z.string().datetime().nullable().optional(),
+    isActive: z.boolean().optional(),
+  });
+
+  private readonly updatePromoSchema = z.object({
+    value: z.number().int().min(1).optional(),
+    maxUses: z.number().int().min(1).nullable().optional(),
+    expiresAt: z.string().datetime().nullable().optional(),
+    isActive: z.boolean().optional(),
+  });
+
+  async listPromoCodes(request: FastifyRequest, reply: FastifyReply) {
+    const query = paginationSchema.parse(request.query);
+    const result = await promoService.list(query);
+    return reply.send(result);
+  }
+
+  async createPromoCode(request: FastifyRequest, reply: FastifyReply) {
+    const parsed = this.createPromoSchema.safeParse(request.body);
+    if (!parsed.success) {
+      throw new ValidationError(parsed.error.issues[0]?.message ?? 'Invalid promo data');
+    }
+    const data = {
+      ...parsed.data,
+      maxUses: parsed.data.maxUses ?? undefined,
+      expiresAt: parsed.data.expiresAt ?? undefined,
+    };
+    const promo = await promoService.create(data, request.userId);
+    return reply.status(201).send(promo);
+  }
+
+  async updatePromoCode(request: FastifyRequest, reply: FastifyReply) {
+    const { id } = idParamSchema.parse(request.params);
+    const parsed = this.updatePromoSchema.safeParse(request.body);
+    if (!parsed.success) {
+      throw new ValidationError(parsed.error.issues[0]?.message ?? 'Invalid promo data');
+    }
+    const promo = await promoService.update(id, parsed.data, request.userId);
+    return reply.send(promo);
+  }
+
+  async deletePromoCode(request: FastifyRequest, reply: FastifyReply) {
+    const { id } = idParamSchema.parse(request.params);
+    await promoService.delete(id, request.userId);
     return reply.status(204).send();
   }
 }

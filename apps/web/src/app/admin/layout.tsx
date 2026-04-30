@@ -13,6 +13,7 @@ const NAV_ITEMS = [
   { href: '/admin/articles', label: 'Статьи PDF' },
   { href: '/admin/reviews', label: 'Отзывы' },
   { href: '/admin/tariffs', label: 'Тарифы' },
+  { href: '/admin/promo', label: 'Промокоды' },
   { href: '/admin/users', label: 'Пользователи' },
   { href: '/admin/subscriptions', label: 'Подписки' },
   { href: '/admin/settings', label: 'Настройки' },

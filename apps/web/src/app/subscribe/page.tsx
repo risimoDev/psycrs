@@ -4,7 +4,7 @@ import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { useQuery, useMutation } from '@tanstack/react-query';
-import { tariffApi, paymentApi, type PublicTariff } from '../../lib/api';
+import { tariffApi, paymentApi, promoApi, type PublicTariff, type PromoValidationResult } from '../../lib/api';
 import { useAuthStore } from '../../lib/auth-store';
 import { Header } from '../../components/header';
 import { Footer } from '../../components/footer';
@@ -31,12 +31,18 @@ function CheckIcon() {
   );
 }
 
-function TariffCard({ tariff, onSelect, loading }: {
+function TariffCard({ tariff, promoResult, onSelect, loading }: {
   tariff: PublicTariff;
+  promoResult: PromoValidationResult | null;
   onSelect: (id: string) => void;
   loading: boolean;
 }) {
   const periodLabel = PERIOD_LABELS[tariff.period] ?? tariff.period;
+
+  const discountedPrice = promoResult
+    ? (promoResult.type === 'trial' ? 100 : promoResult.finalAmount)
+    : tariff.price;
+  const hasDiscount = promoResult && discountedPrice !== tariff.price;
 
   return (
     <div
@@ -63,14 +69,34 @@ function TariffCard({ tariff, onSelect, loading }: {
 
       <div className="mb-6">
         <div className="flex items-end gap-2">
-          <span className="font-heading text-3xl font-bold text-foreground">
-            {formatPrice(tariff.price)}
+          <span className={`font-heading text-3xl font-bold ${hasDiscount ? 'text-accent' : 'text-foreground'}`}>
+            {formatPrice(discountedPrice)}
           </span>
           <span className="text-sm text-muted font-body pb-0.5">{periodLabel}</span>
         </div>
-        {tariff.oldPrice && (
+        {hasDiscount && (
+          <p className="mt-1 text-sm text-foreground/40 line-through font-body">
+            {formatPrice(tariff.price)}
+          </p>
+        )}
+        {!hasDiscount && tariff.oldPrice && (
           <p className="mt-1 text-sm text-foreground/40 line-through font-body">
             {formatPrice(tariff.oldPrice)}
+          </p>
+        )}
+        {promoResult?.type === 'trial' && promoResult.trialDays && (
+          <p className="mt-2 text-xs text-accent font-body font-medium">
+            Тестовый доступ: {promoResult.trialDays} дн. за 1 ₽, далее — {formatPrice(tariff.price)}
+          </p>
+        )}
+        {promoResult?.type === 'fixed' && hasDiscount && (
+          <p className="mt-2 text-xs text-accent font-body font-medium">
+            Скидка {formatPrice(promoResult.discountAmount)}
+          </p>
+        )}
+        {promoResult?.type === 'percent' && hasDiscount && (
+          <p className="mt-2 text-xs text-accent font-body font-medium">
+            Скидка {promoResult.value}%
           </p>
         )}
       </div>
@@ -93,7 +119,7 @@ function TariffCard({ tariff, onSelect, loading }: {
         onClick={() => onSelect(tariff.id)}
         className="mt-auto"
       >
-        Оплатить
+        {promoResult?.type === 'trial' ? 'Начать тестовый доступ' : 'Оплатить'}
       </Button>
     </div>
   );
@@ -103,6 +129,10 @@ export default function SubscribePage() {
   const router = useRouter();
   const { isAuthenticated, isLoading: authLoading } = useAuthStore();
   const [payError, setPayError] = useState('');
+  const [promoInput, setPromoInput] = useState('');
+  const [promoResult, setPromoResult] = useState<PromoValidationResult | null>(null);
+  const [promoError, setPromoError] = useState('');
+  const [promoLoading, setPromoLoading] = useState(false);
 
   const { data: tariffs, isLoading: tariffsLoading } = useQuery({
     queryKey: ['tariffs', 'public'],
@@ -111,7 +141,7 @@ export default function SubscribePage() {
   });
 
   const payMut = useMutation({
-    mutationFn: (tariffId: string) => paymentApi.create(tariffId),
+    mutationFn: (tariffId: string) => paymentApi.create(tariffId, promoResult ? promoInput.trim() : undefined),
     onSuccess: (data) => {
       window.location.href = data.confirmationUrl;
     },
@@ -119,6 +149,31 @@ export default function SubscribePage() {
       setPayError(err.message || 'Не удалось создать платёж. Попробуйте ещё раз.');
     },
   });
+
+  async function handleApplyPromo() {
+    const code = promoInput.trim();
+    if (!code) return;
+    setPromoLoading(true);
+    setPromoError('');
+    setPromoResult(null);
+    try {
+      // Use first tariff price for validation (all tariffs share same promo logic)
+      const price = tariffs?.[0]?.price ?? 0;
+      const result = await promoApi.validate(code, price);
+      setPromoResult(result);
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : 'Промокод не найден';
+      setPromoError(msg);
+    } finally {
+      setPromoLoading(false);
+    }
+  }
+
+  function handleClearPromo() {
+    setPromoInput('');
+    setPromoResult(null);
+    setPromoError('');
+  }
 
   if (authLoading) {
     return (
@@ -150,6 +205,54 @@ export default function SubscribePage() {
             </p>
           </div>
 
+          {/* Promo code */}
+          <div className="max-w-md mx-auto mb-8">
+            <div className="flex gap-2">
+              <div className="flex-1 relative">
+                <input
+                  type="text"
+                  value={promoInput}
+                  onChange={(e) => {
+                    setPromoInput(e.target.value.toUpperCase());
+                    if (promoResult) { setPromoResult(null); setPromoError(''); }
+                  }}
+                  placeholder="Промокод"
+                  className="w-full rounded-lg border border-foreground/20 bg-surface px-4 py-2.5 text-sm font-body text-foreground placeholder:text-muted focus:border-accent focus:outline-none focus:ring-1 focus:ring-accent/30"
+                />
+                {promoResult && (
+                  <button
+                    onClick={handleClearPromo}
+                    className="absolute right-2 top-1/2 -translate-y-1/2 text-muted hover:text-foreground text-lg leading-none"
+                    type="button"
+                  >
+                    ×
+                  </button>
+                )}
+              </div>
+              <Button
+                variant={promoResult ? 'primary' : 'outline'}
+                onClick={handleApplyPromo}
+                loading={promoLoading}
+                disabled={!promoInput.trim()}
+              >
+                {promoResult ? 'Применён' : 'Применить'}
+              </Button>
+            </div>
+            {promoError && (
+              <p className="mt-2 text-xs text-red-400 font-body">{promoError}</p>
+            )}
+            {promoResult && (
+              <p className="mt-2 text-xs text-accent font-body font-medium">
+                {promoResult.type === 'trial'
+                  ? `Тестовый доступ: ${promoResult.trialDays} дней за 1 ₽`
+                  : promoResult.type === 'percent'
+                  ? `Скидка ${promoResult.value}% применена`
+                  : `Скидка ${formatPrice(promoResult.discountAmount)} применена`
+                }
+              </p>
+            )}
+          </div>
+
           {/* Error */}
           {payError && (
             <div className="mb-6 max-w-md mx-auto p-3 bg-red-500/10 border border-red-500/20 rounded-lg text-sm text-red-400 font-body text-center">
@@ -178,10 +281,19 @@ export default function SubscribePage() {
                 <TariffCard
                   key={tariff.id}
                   tariff={tariff}
+                  promoResult={promoResult}
                   onSelect={(id) => payMut.mutate(id)}
                   loading={payMut.isPending}
                 />
               ))}
+            </div>
+          )}
+
+          {/* Trial terms */}
+          {promoResult?.type === 'trial' && (
+            <div className="max-w-2xl mx-auto mt-8 p-4 bg-accent/5 border border-accent/20 rounded-lg text-sm font-body text-foreground/70">
+              <p className="font-semibold text-foreground mb-1">Условия тестового доступа</p>
+              <p>При активации тестового доступа с вашей карты списывается 1 ₽. По истечении тестового периода ({promoResult.trialDays} дн.) с сохранённой карты будет автоматически списана полная стоимость подписки. Вы можете отменить подписку до окончания тестового периода в личном кабинете.</p>
             </div>
           )}
 
