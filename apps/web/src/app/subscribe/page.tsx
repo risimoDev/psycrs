@@ -31,6 +31,13 @@ function CheckIcon() {
   );
 }
 
+function calcDiscountedPrice(tariffPrice: number, promo: PromoValidationResult): number {
+  if (promo.type === 'trial') return 100;
+  if (promo.type === 'fixed') return Math.max(0, tariffPrice - promo.value);
+  if (promo.type === 'percent') return Math.max(0, tariffPrice - Math.round(tariffPrice * promo.value / 100));
+  return tariffPrice;
+}
+
 function TariffCard({ tariff, promoResult, onSelect, loading }: {
   tariff: PublicTariff;
   promoResult: PromoValidationResult | null;
@@ -39,10 +46,9 @@ function TariffCard({ tariff, promoResult, onSelect, loading }: {
 }) {
   const periodLabel = PERIOD_LABELS[tariff.period] ?? tariff.period;
 
-  const discountedPrice = promoResult
-    ? (promoResult.type === 'trial' ? 100 : promoResult.finalAmount)
-    : tariff.price;
+  const discountedPrice = promoResult ? calcDiscountedPrice(tariff.price, promoResult) : tariff.price;
   const hasDiscount = promoResult && discountedPrice !== tariff.price;
+  const discountAmount = tariff.price - discountedPrice;
 
   return (
     <div
@@ -91,7 +97,7 @@ function TariffCard({ tariff, promoResult, onSelect, loading }: {
         )}
         {promoResult?.type === 'fixed' && hasDiscount && (
           <p className="mt-2 text-xs text-accent font-body font-medium">
-            Скидка {formatPrice(promoResult.discountAmount)}
+            Скидка {formatPrice(discountAmount)}
           </p>
         )}
         {promoResult?.type === 'percent' && hasDiscount && (

@@ -93,7 +93,7 @@ export default function PromoCodesPage() {
     createMut.mutate({
       code: newCode.trim().toUpperCase(),
       type: newType,
-      value: parseInt(newValue, 10),
+      value: newType === 'fixed' ? Math.round(parseFloat(newValue) * 100) : parseInt(newValue, 10),
       maxUses: newMaxUses ? parseInt(newMaxUses, 10) : null,
       expiresAt: newExpiresAt ? new Date(newExpiresAt).toISOString() : null,
     });
@@ -146,13 +146,13 @@ export default function PromoCodesPage() {
             </div>
             <div>
               <label className="block text-sm font-medium text-foreground mb-1">
-                {newType === 'percent' ? 'Процент (1-100)' : newType === 'fixed' ? 'Сумма (копейки)' : 'Дней теста'} *
+                {newType === 'percent' ? 'Процент (1-100)' : newType === 'fixed' ? 'Сумма скидки (₽)' : 'Дней теста'} *
               </label>
               <input
                 type="number"
                 value={newValue}
                 onChange={(e) => setNewValue(e.target.value)}
-                placeholder={newType === 'percent' ? '20' : newType === 'fixed' ? '50000' : '7'}
+                placeholder={newType === 'percent' ? '20' : newType === 'fixed' ? '500' : '7'}
                 className="w-full rounded-lg border border-foreground/20 bg-background px-3 py-2 text-sm text-foreground placeholder:text-muted focus:border-accent focus:outline-none"
               />
             </div>
