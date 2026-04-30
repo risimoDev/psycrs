@@ -184,9 +184,12 @@ export function ReviewSection() {
   return (
     <div>
       <ReviewCarousel />
-      <div className="max-w-5xl mx-auto px-4 sm:px-6 mt-8 text-center">
-        <p className="text-sm text-muted mb-3">Оставьте свой отзыв и получите рабочую тетрадь по тревожности</p>
-        <Button onClick={() => setShowModal(true)}>Оставить отзыв</Button>
+      <div className="max-w-5xl mx-auto px-4 sm:px-6 mt-10">
+        <div className="mx-auto max-w-lg text-center rounded-2xl bg-accent/8 border border-accent/20 p-6">
+          <p className="text-accent font-heading font-bold text-lg mb-1">Подарок за отзыв!</p>
+          <p className="text-sm text-foreground/70 mb-4">Оставьте отзыв о курсе и получите <span className="font-semibold text-foreground">рабочую тетрадь по тревожности</span> в подарок</p>
+          <Button onClick={() => setShowModal(true)}>Оставить отзыв</Button>
+        </div>
       </div>
       {showModal && <ReviewModal onClose={() => setShowModal(false)} />}
     </div>
