@@ -372,14 +372,14 @@ export class AdminController {
     type: z.enum(['fixed', 'percent', 'trial']),
     value: z.number().int().min(1),
     maxUses: z.number().int().min(1).nullable().optional(),
-    expiresAt: z.string().datetime().nullable().optional(),
+    expiresAt: z.string().nullable().optional(),
     isActive: z.boolean().optional(),
   });
 
   private readonly updatePromoSchema = z.object({
     value: z.number().int().min(1).optional(),
     maxUses: z.number().int().min(1).nullable().optional(),
-    expiresAt: z.string().datetime().nullable().optional(),
+    expiresAt: z.string().nullable().optional(),
     isActive: z.boolean().optional(),
   });
 

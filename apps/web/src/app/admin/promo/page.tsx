@@ -95,7 +95,7 @@ export default function PromoCodesPage() {
       type: newType,
       value: parseInt(newValue, 10),
       maxUses: newMaxUses ? parseInt(newMaxUses, 10) : null,
-      expiresAt: newExpiresAt || null,
+      expiresAt: newExpiresAt ? new Date(newExpiresAt).toISOString() : null,
     });
   }
 
