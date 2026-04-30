@@ -78,5 +78,9 @@ export const useAuthStore = create<AuthState>((set, _get) => ({
 
     setAccessToken(null);
     set({ user: null, isAuthenticated: false });
+
+    if (typeof window !== 'undefined') {
+      window.location.href = '/';
+    }
   },
 }));

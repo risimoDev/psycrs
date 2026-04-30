@@ -78,7 +78,7 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
               {user?.email}
             </span>
             <button
-              onClick={() => { logout(); router.push('/'); }}
+              onClick={() => { logout(); }}
               className="rounded px-3 py-1.5 text-xs font-medium text-foreground/50 transition-colors hover:bg-foreground/5 hover:text-foreground font-body"
             >
               Выйти
