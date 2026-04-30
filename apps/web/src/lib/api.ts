@@ -66,7 +66,7 @@ async function request<T>(path: string, options: FetchOptions = {}): Promise<T> 
   const isFormData = body instanceof FormData;
   
   const headers: Record<string, string> = {
-    ...(!isFormData && { 'Content-Type': 'application/json' }),
+    ...(body && !isFormData ? { 'Content-Type': 'application/json' } : {}),
     ...(customHeaders as Record<string, string>),
   };
 
